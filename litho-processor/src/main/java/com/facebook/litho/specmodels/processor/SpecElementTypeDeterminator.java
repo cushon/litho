@@ -28,23 +28,25 @@ import javax.lang.model.type.TypeMirror;
 
 public class SpecElementTypeDeterminator {
   static boolean isKotlinSingleton(TypeElement element) {
+    final String className = element.getQualifiedName().toString();
     return element.getKind() == ElementKind.CLASS
         && element.getEnclosedElements().stream()
             .anyMatch(
                 e ->
                     isPublicStaticFinalElement(e)
-                        && isElementWithType(e, element)
+                        && isElementWithTypeName(e, className)
                         && e.getSimpleName().contentEquals("INSTANCE"));
   }
 
   static boolean isKotlinClass(TypeElement element) {
+    final String companionClassName = element.getQualifiedName().toString() + ".Companion";
     return element.getKind() == ElementKind.CLASS
         /* should contain a companion static field instance */
         && element.getEnclosedElements().stream()
             .anyMatch(
                 e ->
                     isPublicStaticFinalElement(e)
-                        && isElementWithType(e, element)
+                        && isElementWithTypeName(e, companionClassName)
                         && e.getSimpleName().contentEquals("Companion"))
         /* should contain a Companion class declaration. */
         && element.getEnclosedElements().stream()
@@ -72,9 +74,9 @@ public class SpecElementTypeDeterminator {
         .containsAll(ImmutableList.of(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL));
   }
 
-  static boolean isElementWithType(Element e, TypeElement typeElement) {
+  static boolean isElementWithTypeName(Element e, String name) {
     TypeMirror type = e.asType();
     return type.getKind() == TypeKind.DECLARED
-        && ((DeclaredType) type).asElement().equals(typeElement);
+        && ((TypeElement) ((DeclaredType) type).asElement()).getQualifiedName().contentEquals(name);
   }
 }
