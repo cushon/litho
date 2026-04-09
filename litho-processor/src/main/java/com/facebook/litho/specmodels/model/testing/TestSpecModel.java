@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,19 +17,19 @@
 package com.facebook.litho.specmodels.model.testing;
 
 import androidx.annotation.VisibleForTesting;
+import com.facebook.infer.annotation.Nullsafe;
 import com.facebook.litho.specmodels.internal.ImmutableList;
 import com.facebook.litho.specmodels.internal.RunMode;
 import com.facebook.litho.specmodels.model.BuilderMethodModel;
 import com.facebook.litho.specmodels.model.CachedValueParamModel;
 import com.facebook.litho.specmodels.model.ClassNames;
 import com.facebook.litho.specmodels.model.DelegateMethod;
-import com.facebook.litho.specmodels.model.DependencyInjectionHelper;
 import com.facebook.litho.specmodels.model.EventDeclarationModel;
 import com.facebook.litho.specmodels.model.EventMethod;
 import com.facebook.litho.specmodels.model.FieldModel;
 import com.facebook.litho.specmodels.model.HasEnclosedSpecModel;
-import com.facebook.litho.specmodels.model.InjectPropModel;
 import com.facebook.litho.specmodels.model.InterStageInputParamModel;
+import com.facebook.litho.specmodels.model.PrepareInterStageInputParamModel;
 import com.facebook.litho.specmodels.model.PropDefaultModel;
 import com.facebook.litho.specmodels.model.PropJavadocModel;
 import com.facebook.litho.specmodels.model.PropModel;
@@ -56,6 +56,7 @@ import javax.annotation.Nullable;
 /**
  * Model that is an abstract representation of a {@link com.facebook.litho.annotations.TestSpec}.
  */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 public class TestSpecModel implements SpecModel, HasEnclosedSpecModel {
   private final SpecModel mSpecModel;
   private final TestSpecGenerator mTestSpecGenerator;
@@ -65,27 +66,23 @@ public class TestSpecModel implements SpecModel, HasEnclosedSpecModel {
       String qualifiedSpecClassName,
       String componentClassName,
       ImmutableList<PropModel> props,
-      ImmutableList<InjectPropModel> injectProps,
       ImmutableList<BuilderMethodModel> builderMethodModels,
       ImmutableList<PropJavadocModel> propJavadocs,
       ImmutableList<TypeVariableName> typeVariables,
       SpecModel enclosedSpecModel,
       TestSpecGenerator testSpecGenerator,
-      String classJavadoc,
-      @Nullable DependencyInjectionHelper dependencyInjectionHelper) {
+      String classJavadoc) {
     mSpecModel =
         SpecModelImpl.newBuilder()
             .qualifiedSpecClassName(qualifiedSpecClassName)
             .componentClassName(componentClassName)
             .componentClass(ClassNames.COMPONENT)
             .props(props)
-            .injectProps(injectProps)
             .extraBuilderMethods(builderMethodModels)
             .classJavadoc(classJavadoc)
             .propJavadocs(propJavadocs)
             .typeVariables(typeVariables)
             .representedObject(enclosedSpecModel)
-            .dependencyInjectionHelper(dependencyInjectionHelper)
             .build();
     mEnclosedSpecModel = enclosedSpecModel;
     mTestSpecGenerator = testSpecGenerator;
@@ -141,6 +138,7 @@ public class TestSpecModel implements SpecModel, HasEnclosedSpecModel {
 
   @Override
   @Nullable
+  // NULLSAFE_FIXME[Inconsistent Subclass Return Annotation]
   public SpecMethodModel<EventMethod, Void> getWorkingRangeRegisterMethod() {
     return mSpecModel.getWorkingRangeRegisterMethod();
   }
@@ -172,16 +170,6 @@ public class TestSpecModel implements SpecModel, HasEnclosedSpecModel {
   }
 
   @Override
-  public ImmutableList<InjectPropModel> getRawInjectProps() {
-    return mSpecModel.getRawInjectProps();
-  }
-
-  @Override
-  public ImmutableList<InjectPropModel> getInjectProps() {
-    return mSpecModel.getInjectProps();
-  }
-
-  @Override
   public ImmutableList<PropDefaultModel> getPropDefaults() {
     return ImmutableList.of();
   }
@@ -204,6 +192,11 @@ public class TestSpecModel implements SpecModel, HasEnclosedSpecModel {
   @Override
   public ImmutableList<InterStageInputParamModel> getInterStageInputs() {
     return mSpecModel.getInterStageInputs();
+  }
+
+  @Override
+  public ImmutableList<PrepareInterStageInputParamModel> getPrepareInterStageInputs() {
+    return mSpecModel.getPrepareInterStageInputs();
   }
 
   @Override
@@ -287,11 +280,6 @@ public class TestSpecModel implements SpecModel, HasEnclosedSpecModel {
   }
 
   @Override
-  public boolean hasInjectedDependencies() {
-    return mSpecModel.hasInjectedDependencies();
-  }
-
-  @Override
   public boolean shouldCheckIdInIsEquivalentToMethod() {
     return mSpecModel.shouldCheckIdInIsEquivalentToMethod();
   }
@@ -307,14 +295,18 @@ public class TestSpecModel implements SpecModel, HasEnclosedSpecModel {
   }
 
   @Override
+  public boolean shouldGenerateTransferState() {
+    return mSpecModel.shouldGenerateTransferState();
+  }
+
+  @Override
   public boolean shouldGenerateCopyMethod() {
     return true;
   }
 
   @Override
-  @Nullable
-  public DependencyInjectionHelper getDependencyInjectionHelper() {
-    return mSpecModel.getDependencyInjectionHelper();
+  public boolean isStateful() {
+    return mSpecModel.isStateful();
   }
 
   @Override

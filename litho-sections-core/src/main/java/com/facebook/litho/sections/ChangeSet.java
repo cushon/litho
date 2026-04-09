@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,8 +27,10 @@ import static com.facebook.litho.sections.Change.UPDATE_RANGE;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
+import com.facebook.infer.annotation.Nullsafe;
 import com.facebook.infer.annotation.ThreadConfined;
-import com.facebook.litho.TreeProps;
+import com.facebook.litho.TreePropContainer;
+import com.facebook.litho.config.LithoDebugConfigurations;
 import com.facebook.litho.sections.SectionTree.Target;
 import com.facebook.litho.sections.annotations.DiffSectionSpec;
 import com.facebook.litho.sections.annotations.OnDiff;
@@ -43,10 +45,12 @@ import java.util.List;
  * DiffSectionSpec} to allow the ChangeSetSpec to define its changes based on old/new props and
  * state.
  */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 @ThreadConfined(ANY)
 public final class ChangeSet {
 
   private final List<Change> mChanges;
+  // NULLSAFE_FIXME[Field Not Initialized]
   private Section mSection;
 
   @Nullable private ChangeSetStats mChangeSetStats;
@@ -72,6 +76,10 @@ public final class ChangeSet {
 
   List<Change> getChanges() {
     return mChanges;
+  }
+
+  public String getSectionName() {
+    return mSection != null ? mSection.getSimpleName() : "null";
   }
 
   /**
@@ -115,32 +123,40 @@ public final class ChangeSet {
     return changeDelta;
   }
 
-  public void insert(int index, RenderInfo renderInfo, @Nullable TreeProps treeProps) {
-    insert(index, renderInfo, treeProps, null);
+  public void insert(
+      int index, RenderInfo renderInfo, @Nullable TreePropContainer treePropContainer) {
+    insert(index, renderInfo, treePropContainer, null);
   }
 
   public void insert(
-      int index, RenderInfo renderInfo, @Nullable TreeProps treeProps, @Nullable Object data) {
+      int index,
+      RenderInfo renderInfo,
+      @Nullable TreePropContainer treePropContainer,
+      @Nullable Object data) {
     // Null check for tests only. This should never be the case otherwise.
-    if (mSection != null) {
+    if (mSection != null && LithoDebugConfigurations.isRenderInfoDebuggingEnabled) {
       renderInfo.addDebugInfo(SectionsDebugParams.SECTION_GLOBAL_KEY, mSection.getGlobalKey());
     }
-    addChange(Change.insert(index, new TreePropsWrappedRenderInfo(renderInfo, treeProps), data));
-  }
-
-  public void insertRange(
-      int index, int count, List<RenderInfo> renderInfos, @Nullable TreeProps treeProps) {
-    insertRange(index, count, renderInfos, treeProps, null);
+    addChange(
+        Change.insert(index, new TreePropsWrappedRenderInfo(renderInfo, treePropContainer), data));
   }
 
   public void insertRange(
       int index,
       int count,
       List<RenderInfo> renderInfos,
-      @Nullable TreeProps treeProps,
+      @Nullable TreePropContainer treePropContainer) {
+    insertRange(index, count, renderInfos, treePropContainer, null);
+  }
+
+  public void insertRange(
+      int index,
+      int count,
+      List<RenderInfo> renderInfos,
+      @Nullable TreePropContainer treePropContainer,
       @Nullable List<?> data) {
     // Null check for tests only. This should never be the case otherwise.
-    if (mSection != null) {
+    if (mSection != null && LithoDebugConfigurations.isRenderInfoDebuggingEnabled) {
       for (int i = 0, size = renderInfos.size(); i < size; i++) {
         renderInfos
             .get(i)
@@ -148,39 +164,51 @@ public final class ChangeSet {
       }
     }
     addChange(
-        Change.insertRange(index, count, wrapTreePropRenderInfos(renderInfos, treeProps), data));
+        Change.insertRange(
+            index, count, wrapTreePropRenderInfos(renderInfos, treePropContainer), data));
   }
 
-  public void update(int index, RenderInfo renderInfo, @Nullable TreeProps treeProps) {
-    update(index, renderInfo, treeProps, null, null);
+  public void update(
+      int index, RenderInfo renderInfo, @Nullable TreePropContainer treePropContainer) {
+    update(index, renderInfo, treePropContainer, null, null);
   }
 
   public void update(
       int index,
       RenderInfo renderInfo,
-      @Nullable TreeProps treeProps,
+      @Nullable TreePropContainer treePropContainer,
       @Nullable Object prevData,
       @Nullable Object nextData) {
     addChange(
         Change.update(
-            index, new TreePropsWrappedRenderInfo(renderInfo, treeProps), prevData, nextData));
-  }
-
-  public void updateRange(
-      int index, int count, List<RenderInfo> renderInfos, @Nullable TreeProps treeProps) {
-    updateRange(index, count, renderInfos, treeProps, null, null);
+            index,
+            new TreePropsWrappedRenderInfo(renderInfo, treePropContainer),
+            prevData,
+            nextData));
   }
 
   public void updateRange(
       int index,
       int count,
       List<RenderInfo> renderInfos,
-      @Nullable TreeProps treeProps,
+      @Nullable TreePropContainer treePropContainer) {
+    updateRange(index, count, renderInfos, treePropContainer, null, null);
+  }
+
+  public void updateRange(
+      int index,
+      int count,
+      List<RenderInfo> renderInfos,
+      @Nullable TreePropContainer treePropContainer,
       @Nullable List<?> prevData,
       @Nullable List<?> nextData) {
     addChange(
         Change.updateRange(
-            index, count, wrapTreePropRenderInfos(renderInfos, treeProps), prevData, nextData));
+            index,
+            count,
+            wrapTreePropRenderInfos(renderInfos, treePropContainer),
+            prevData,
+            nextData));
   }
 
   public void delete(int index) {
@@ -208,8 +236,7 @@ public final class ChangeSet {
   }
 
   /**
-   * @return the total number of items in the {@link Target}
-   * after this ChangeSet will be applied.
+   * @return the total number of items in the {@link Target} after this ChangeSet will be applied.
    */
   int getCount() {
     return mFinalCount;
@@ -220,16 +247,22 @@ public final class ChangeSet {
     return mChangeSetStats;
   }
 
-  /** @return an empty ChangeSet. */
+  /**
+   * @return an empty ChangeSet.
+   */
   @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
-  public static ChangeSet acquireChangeSet(Section section, boolean enableStats) {
+  public static ChangeSet acquireChangeSet(@Nullable Section section, boolean enableStats) {
     return acquireChangeSet(0, section, enableStats);
   }
 
-  /** @return an empty ChangeSet starting from count startCount. */
-  static ChangeSet acquireChangeSet(int startCount, Section section, boolean enableStats) {
-    final ChangeSet changeSet = acquire();
+  /**
+   * @return an empty ChangeSet starting from count startCount.
+   */
+  static ChangeSet acquireChangeSet(
+      int startCount, @Nullable Section section, boolean enableStats) {
+    final ChangeSet changeSet = new ChangeSet();
     changeSet.mFinalCount = startCount;
+    // NULLSAFE_FIXME[Field Not Nullable]
     changeSet.mSection = section;
     changeSet.mChangeSetStats = enableStats ? new ChangeSetStats() : null;
 
@@ -238,14 +271,14 @@ public final class ChangeSet {
 
   /** Wrap the given list of {@link RenderInfo} in a {@link TreePropsWrappedRenderInfo}. */
   private static List<RenderInfo> wrapTreePropRenderInfos(
-      List<RenderInfo> renderInfos, @Nullable TreeProps treeProps) {
-    if (treeProps == null) {
+      List<RenderInfo> renderInfos, @Nullable TreePropContainer treePropContainer) {
+    if (treePropContainer == null) {
       return renderInfos;
     }
 
     final List<RenderInfo> wrappedRenderInfos = new ArrayList<>(renderInfos.size());
     for (int i = 0; i < renderInfos.size(); i++) {
-      wrappedRenderInfos.add(new TreePropsWrappedRenderInfo(renderInfos.get(i), treeProps));
+      wrappedRenderInfos.add(new TreePropsWrappedRenderInfo(renderInfos.get(i), treePropContainer));
     }
 
     return wrappedRenderInfos;
@@ -255,7 +288,7 @@ public final class ChangeSet {
    * Used internally by the framework to merge all the ChangeSet generated by all the leaf {@link
    * Section}. The merged ChangeSet will be passed to the {@link Target}.
    */
-  static ChangeSet merge(ChangeSet first, ChangeSet second) {
+  static ChangeSet merge(@Nullable ChangeSet first, ChangeSet second) {
     final ChangeSet mergedChangeSet = acquireChangeSet(null, false);
     final int firstCount = first != null ? first.mFinalCount : 0;
     final int secondCount = second != null ? second.mFinalCount : 0;
@@ -266,7 +299,7 @@ public final class ChangeSet {
 
     if (first != null) {
       for (Change change : first.mChanges) {
-        mergedChanged.add(Change.copy(change));
+        mergedChanged.add(change);
       }
     }
 
@@ -280,22 +313,6 @@ public final class ChangeSet {
     mergedChangeSet.mChangeSetStats = ChangeSetStats.merge(firstStats, secondStats);
 
     return mergedChangeSet;
-  }
-
-  //TODO implement pools t11953296
-  private static ChangeSet acquire() {
-    return new ChangeSet();
-  }
-
-  //TODO implement pools t11953296
-  void release() {
-    for (Change change : mChanges) {
-      change.release();
-    }
-
-    mChanges.clear();
-    mChangeSetStats = null;
-    mFinalCount = 0;
   }
 
   /** Keep track of internal statistics useful for performance analyses. */
@@ -477,7 +494,7 @@ public final class ChangeSet {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
       if (this == o) return true;
       if (o == null || getClass() != o.getClass()) return false;
 

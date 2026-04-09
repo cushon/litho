@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,36 +17,25 @@
 package com.facebook.litho.sections.widget;
 
 import androidx.annotation.Nullable;
-import com.facebook.litho.ComponentLogParams;
-import com.facebook.litho.LithoHandler;
-import com.facebook.litho.config.ComponentsConfiguration;
-import com.facebook.litho.config.LayoutThreadPoolConfiguration;
+import com.facebook.infer.annotation.Nullsafe;
+import com.facebook.litho.config.PrimitiveRecyclerBinderStrategy;
 import com.facebook.litho.sections.SectionTree;
 import com.facebook.litho.sections.config.SectionsConfiguration;
-import com.facebook.litho.widget.LayoutHandlerFactory;
 import com.facebook.litho.widget.RecyclerBinder;
-import java.util.List;
+import com.facebook.litho.widget.RecyclerBinderConfig;
+import com.facebook.rendercore.RunnableHandler;
 
 /** Configuration setting for {@link RecyclerBinder}. */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 public class RecyclerBinderConfiguration {
-  private final float mRangeRatio;
-  @Nullable private final LayoutHandlerFactory mLayoutHandlerFactory;
-  private final boolean mIsCircular;
-  private final boolean mIsWrapContent;
-  private final boolean mMoveLayoutsBetweenThreads;
-  private final boolean mUseCancelableLayoutFutures;
   // TODO T34627443 make all fields final after removing setters
-  private boolean mHasDynamicItemHeight;
   private boolean mUseBackgroundChangeSets = SectionsConfiguration.useBackgroundChangeSets;
-  private boolean mHScrollAsyncMode;
-  private boolean mEnableStableIds;
-  private LayoutThreadPoolConfiguration mThreadPoolConfiguration =
-      ComponentsConfiguration.threadPoolConfiguration;
-  private boolean mAsyncInitRange = ComponentsConfiguration.asyncInitRange;
-  @Nullable private List<ComponentLogParams> mInvalidStateLogParamsList;
-  private final boolean mSplitLayoutForMeasureAndRangeEstimation;
-  @Nullable private LithoHandler mChangeSetThreadHandler;
-  private final boolean mEnableDetach;
+  @Nullable private RunnableHandler mChangeSetThreadHandler;
+  private final boolean mPostToFrontOfQueueForFirstChangeset;
+
+  @Nullable private final PrimitiveRecyclerBinderStrategy mPrimitiveRecyclerBinderStrategy;
+
+  private final RecyclerBinderConfig mRecyclerBinderConfig;
 
   public static Builder create() {
     return new Builder();
@@ -57,220 +46,67 @@ public class RecyclerBinderConfiguration {
   }
 
   private RecyclerBinderConfiguration(
-      float rangeRatio,
-      @Nullable LayoutHandlerFactory layoutHandlerFactory,
-      boolean circular,
-      boolean wrapContent,
-      @Nullable List<ComponentLogParams> invalidStateLogParamsList,
-      LayoutThreadPoolConfiguration threadPoolConfiguration,
-      boolean dynamicItemHeight,
+      RecyclerBinderConfig recyclerBinderConfig,
       boolean useBackgroundChangeSets,
-      boolean hScrollAsyncMode,
-      boolean enableStableIds,
-      boolean asyncInitRange,
-      boolean splitLayoutForMeasureAndRangeEstimation,
-      boolean enableDetach,
-      @Nullable LithoHandler changeSetThreadHandler,
-      boolean moveLayoutsBetweenThreads,
-      boolean useCancelableLayoutFutures) {
-    mRangeRatio = rangeRatio;
-    mLayoutHandlerFactory = layoutHandlerFactory;
-    mIsCircular = circular;
-    mIsWrapContent = wrapContent;
-    mInvalidStateLogParamsList = invalidStateLogParamsList;
-    mThreadPoolConfiguration = threadPoolConfiguration;
-    mHasDynamicItemHeight = dynamicItemHeight;
+      @Nullable RunnableHandler changeSetThreadHandler,
+      boolean postToFrontOfQueueForFirstChangeset,
+      @Nullable PrimitiveRecyclerBinderStrategy primitiveRecyclerBinderStrategy) {
     mUseBackgroundChangeSets = useBackgroundChangeSets;
-    mHScrollAsyncMode = hScrollAsyncMode;
-    mEnableStableIds = enableStableIds;
-    mAsyncInitRange = asyncInitRange;
-    mSplitLayoutForMeasureAndRangeEstimation = splitLayoutForMeasureAndRangeEstimation;
-    mEnableDetach = enableDetach;
     mChangeSetThreadHandler = changeSetThreadHandler;
-    mMoveLayoutsBetweenThreads = moveLayoutsBetweenThreads;
-    mUseCancelableLayoutFutures = useCancelableLayoutFutures;
-  }
-
-  public float getRangeRatio() {
-    return mRangeRatio;
-  }
-
-  public @Nullable LayoutHandlerFactory getLayoutHandlerFactory() {
-    return mLayoutHandlerFactory;
-  }
-
-  public boolean isCircular() {
-    return mIsCircular;
-  }
-
-  public boolean isWrapContent() {
-    return mIsWrapContent;
-  }
-
-  boolean hasDynamicItemHeight() {
-    return mHasDynamicItemHeight;
+    mPostToFrontOfQueueForFirstChangeset = postToFrontOfQueueForFirstChangeset;
+    mRecyclerBinderConfig = recyclerBinderConfig;
+    mPrimitiveRecyclerBinderStrategy = primitiveRecyclerBinderStrategy;
   }
 
   public boolean getUseBackgroundChangeSets() {
     return mUseBackgroundChangeSets;
   }
 
-  public boolean getHScrollAsyncMode() {
-    return mHScrollAsyncMode;
-  }
-
-  public LayoutThreadPoolConfiguration getThreadPoolConfiguration() {
-    return mThreadPoolConfiguration;
-  }
-
-  public boolean getAsyncInitRange() {
-    return mAsyncInitRange;
-  }
-
-  public boolean getEnableStableIds() {
-    return mEnableStableIds;
-  }
-
-  public @Nullable List<ComponentLogParams> getInvalidStateLogParamsList() {
-    return mInvalidStateLogParamsList;
-  }
-
-  public @Nullable LithoHandler getChangeSetThreadHandler() {
+  public @Nullable RunnableHandler getChangeSetThreadHandler() {
     return mChangeSetThreadHandler;
   }
 
-  public boolean splitLayoutForMeasureAndRangeEstimation() {
-    return mSplitLayoutForMeasureAndRangeEstimation;
+  public boolean isPostToFrontOfQueueForFirstChangeset() {
+    return mPostToFrontOfQueueForFirstChangeset;
   }
 
-  public boolean useCancelableLayoutFutures() {
-    return mUseCancelableLayoutFutures;
+  public RecyclerBinderConfig getRecyclerBinderConfig() {
+    return mRecyclerBinderConfig;
   }
 
-  public boolean moveLayoutsBetweenThreads() {
-    return mMoveLayoutsBetweenThreads;
+  @Nullable
+  public PrimitiveRecyclerBinderStrategy getPrimitiveRecyclerBinderStrategy() {
+    return mPrimitiveRecyclerBinderStrategy;
   }
 
-  public boolean getEnableDetach() {
-    return mEnableDetach;
-  }
+  public static final class Builder {
 
-  public static class Builder {
-    public static final LayoutThreadPoolConfiguration DEFAULT_THREAD_POOL_CONFIG =
-        ComponentsConfiguration.threadPoolConfiguration;
-    static final float DEFAULT_RANGE = RecyclerBinder.Builder.DEFAULT_RANGE_RATIO;
-
-    @Nullable private LayoutHandlerFactory mLayoutHandlerFactory;
-    @Nullable private List<ComponentLogParams> mInvalidStateLogParamsList;
-    private LayoutThreadPoolConfiguration mThreadPoolConfiguration = DEFAULT_THREAD_POOL_CONFIG;
-    private float mRangeRatio = DEFAULT_RANGE;
-    private boolean mCircular = false;
-    private boolean mWrapContent = false;
-    private boolean mDynamicItemHeight = false;
-    private boolean mHScrollAsyncMode = false;
-    private boolean mEnableStableIds = false;
+    // NULLSAFE_FIXME[Field Not Initialized]
+    private RecyclerBinderConfig mRecyclerBinderConfig;
     private boolean mUseBackgroundChangeSets = SectionsConfiguration.useBackgroundChangeSets;
-    private boolean mAsyncInitRange = ComponentsConfiguration.asyncInitRange;
-    private boolean mSplitLayoutForMeasureAndRangeEstimation =
-        ComponentsConfiguration.splitLayoutForMeasureAndRangeEstimation;
-    private boolean mUseCancelableLayoutFutures =
-        ComponentsConfiguration.useCancelableLayoutFutures;
-    private boolean mMoveLayoutsBetweenThreads =
-        ComponentsConfiguration.canInterruptAndMoveLayoutsBetweenThreads;
-    private boolean mEnableDetach = false;
-    @Nullable private LithoHandler mChangeSetThreadHandler;
+    @Nullable private RunnableHandler mChangeSetThreadHandler;
+    private boolean mPostToFrontOfQueueForFirstChangeset;
+    @Nullable private PrimitiveRecyclerBinderStrategy mIsPrimitiveRecyclerEnabled;
 
     Builder() {}
 
     private Builder(RecyclerBinderConfiguration configuration) {
-      this.mLayoutHandlerFactory = configuration.mLayoutHandlerFactory;
-      this.mInvalidStateLogParamsList = configuration.mInvalidStateLogParamsList;
-      this.mThreadPoolConfiguration = configuration.mThreadPoolConfiguration;
-      this.mRangeRatio = configuration.mRangeRatio;
-      this.mCircular = configuration.mIsCircular;
-      this.mWrapContent = configuration.mIsWrapContent;
-      this.mDynamicItemHeight = configuration.mHasDynamicItemHeight;
-      this.mHScrollAsyncMode = configuration.mHScrollAsyncMode;
-      this.mEnableStableIds = configuration.mEnableStableIds;
+      mRecyclerBinderConfig = configuration.mRecyclerBinderConfig;
       this.mUseBackgroundChangeSets = configuration.mUseBackgroundChangeSets;
-      this.mAsyncInitRange = configuration.mAsyncInitRange;
-      this.mSplitLayoutForMeasureAndRangeEstimation =
-          configuration.mSplitLayoutForMeasureAndRangeEstimation;
-      this.mUseCancelableLayoutFutures = configuration.mUseCancelableLayoutFutures;
-      this.mMoveLayoutsBetweenThreads = configuration.mMoveLayoutsBetweenThreads;
-      this.mEnableDetach = configuration.mEnableDetach;
       this.mChangeSetThreadHandler = configuration.mChangeSetThreadHandler;
+      this.mPostToFrontOfQueueForFirstChangeset =
+          configuration.mPostToFrontOfQueueForFirstChangeset;
+      this.mIsPrimitiveRecyclerEnabled = configuration.mPrimitiveRecyclerBinderStrategy;
     }
 
     /**
-     * @param idleExecutor This determines the thread on which the Component layout calculation will
-     *     be processed in. Null means that the computation will be done in the background thread.
+     * Sets the {@link RecyclerBinderConfig} to be used by the underlying {@link RecyclerBinder}
+     *
+     * <p>This is a transitory API, and eventually it will replace both the {@link
+     * RecyclerBinderConfiguration} and {@link RecyclerBinder.Builder}
      */
-    public Builder idleExecutor(@Nullable LayoutHandlerFactory idleExecutor) {
-      mLayoutHandlerFactory = idleExecutor;
-      return this;
-    }
-
-    public Builder invalidStateLogParamsList(
-        @Nullable List<ComponentLogParams> invalidStateLogParamsList) {
-      mInvalidStateLogParamsList = invalidStateLogParamsList;
-      return this;
-    }
-
-    /** Null value will fall back to the non-null default one. */
-    public Builder threadPoolConfiguration(
-        @Nullable LayoutThreadPoolConfiguration threadPoolConfiguration) {
-      if (threadPoolConfiguration != null) {
-        mThreadPoolConfiguration = threadPoolConfiguration;
-      } else {
-        mThreadPoolConfiguration = DEFAULT_THREAD_POOL_CONFIG;
-      }
-      return this;
-    }
-
-    /**
-     * @param rangeRatio Ratio to determine the number of components before and after the {@link
-     *     androidx.recyclerview.widget.RecyclerView}'s total number of currently visible items to
-     *     have their Component layout computed ahead of time.
-     *     <p>e.g total number of visible items = 5 rangeRatio = 10 total number of items before the
-     *     1st visible item to be computed = 5 * 10 = 50 total number of items after the last
-     *     visible item to be computed = 5 * 10 = 50
-     */
-    public Builder rangeRatio(float rangeRatio) {
-      if (rangeRatio < 0) {
-        throw new IllegalArgumentException("Range ratio cannot be negative: " + rangeRatio);
-      }
-      mRangeRatio = rangeRatio;
-      return this;
-    }
-
-    /**
-     * @param isCircular If true, the underlying RecyclerBinder will have a circular behaviour.
-     *     Note: circular lists DO NOT support any operation that changes the size of items like
-     *     insert, remove, insert range, remove range
-     */
-    public Builder isCircular(boolean isCircular) {
-      mCircular = isCircular;
-      return this;
-    }
-
-    /**
-     * @param isWrapContent If true, the underlying RecyclerBinder will measure the parent height by
-     *     the height of children if the orientation is vertical, or measure the parent width by the
-     *     width of children if the orientation is horizontal.
-     */
-    public Builder wrapContent(boolean isWrapContent) {
-      mWrapContent = isWrapContent;
-      return this;
-    }
-
-    /**
-     * TODO T23919104 mihaelao Do not enable this. This is an experimental feature and your Section
-     * surface will take a perf hit if you use it. Talk to the Litho team if you think you need
-     * this.
-     */
-    public Builder hasDynamicItemHeight(boolean hasDynamicItemHeight) {
-      mDynamicItemHeight = hasDynamicItemHeight;
+    public Builder recyclerBinderConfig(RecyclerBinderConfig recyclerBinderConfig) {
+      mRecyclerBinderConfig = recyclerBinderConfig;
       return this;
     }
 
@@ -282,67 +118,34 @@ public class RecyclerBinderConfiguration {
       return this;
     }
 
-    /** Experimental. See {@link RecyclerBinder.Builder#hscrollAsyncMode(boolean)} for more info. */
-    public Builder hScrollAsyncMode(boolean hScrollAsyncMode) {
-      mHScrollAsyncMode = hScrollAsyncMode;
-      return this;
-    }
-
-    public Builder enableStableIds(boolean enableStableIds) {
-      mEnableStableIds = enableStableIds;
-      return this;
-    }
-
-    public Builder asyncInitRange(boolean asyncInitRange) {
-      mAsyncInitRange = asyncInitRange;
-      return this;
-    }
-
-    public Builder splitLayoutForMeasureAndRangeEstimation(
-        boolean splitLayoutForMeasureAndRangeEstimation) {
-      mSplitLayoutForMeasureAndRangeEstimation = splitLayoutForMeasureAndRangeEstimation;
-      return this;
-    }
-
-    public Builder canInterruptAndMoveLayoutsBetweenThreads(boolean isEnabled) {
-      this.mMoveLayoutsBetweenThreads = isEnabled;
-      return this;
-    }
-
-    public Builder useCancelableLayoutFutures(boolean isEnabled) {
-      this.mUseCancelableLayoutFutures = isEnabled;
-      return this;
-    }
-
-    public Builder changeSetThreadHandler(@Nullable LithoHandler changeSetThreadHandler) {
+    public Builder changeSetThreadHandler(@Nullable RunnableHandler changeSetThreadHandler) {
       mChangeSetThreadHandler = changeSetThreadHandler;
       return this;
     }
 
-    /** If true, detach components under the hood when RecyclerBinder#detach() is called. */
-    public Builder enableDetach(boolean enableDetach) {
-      mEnableDetach = enableDetach;
+    public Builder postToFrontOfQueueForFirstChangeset(
+        boolean postToFrontOfQueueForFirstChangeset) {
+      mPostToFrontOfQueueForFirstChangeset = postToFrontOfQueueForFirstChangeset;
+      return this;
+    }
+
+    public Builder primitiveRecyclerBinderStrategy(
+        @Nullable PrimitiveRecyclerBinderStrategy primitiveRecyclerBinderStrategy) {
+      mIsPrimitiveRecyclerEnabled = primitiveRecyclerBinderStrategy;
       return this;
     }
 
     public RecyclerBinderConfiguration build() {
+      RecyclerBinderConfig builderRecyclerBinderConfig = mRecyclerBinderConfig;
+
       return new RecyclerBinderConfiguration(
-          mRangeRatio,
-          mLayoutHandlerFactory,
-          mCircular,
-          mWrapContent,
-          mInvalidStateLogParamsList,
-          mThreadPoolConfiguration,
-          mDynamicItemHeight,
+          builderRecyclerBinderConfig != null
+              ? builderRecyclerBinderConfig
+              : new RecyclerBinderConfig(),
           mUseBackgroundChangeSets,
-          mHScrollAsyncMode,
-          mEnableStableIds,
-          mAsyncInitRange,
-          mSplitLayoutForMeasureAndRangeEstimation,
-          mEnableDetach,
           mChangeSetThreadHandler,
-          mMoveLayoutsBetweenThreads,
-          mUseCancelableLayoutFutures);
+          mPostToFrontOfQueueForFirstChangeset,
+          mIsPrimitiveRecyclerEnabled);
     }
   }
 }

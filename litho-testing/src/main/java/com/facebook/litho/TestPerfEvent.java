@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,6 +16,8 @@
 
 package com.facebook.litho;
 
+import androidx.annotation.Nullable;
+import com.facebook.infer.annotation.Nullsafe;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -24,9 +26,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Implementation of {@link PerfEvent} for tests.
- */
+/** Implementation of {@link PerfEvent} for tests. */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 public class TestPerfEvent implements PerfEvent {
 
   private static final AtomicInteger sInstanceCounter = new AtomicInteger(0);
@@ -60,7 +61,7 @@ public class TestPerfEvent implements PerfEvent {
    * @param annotationValue
    */
   @Override
-  public void markerAnnotate(String annotationKey, String annotationValue) {
+  public void markerAnnotate(String annotationKey, @Nullable String annotationValue) {
     mAnnotations.put(annotationKey, annotationValue);
   }
 
@@ -170,7 +171,7 @@ public class TestPerfEvent implements PerfEvent {
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(@Nullable Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     TestPerfEvent that = (TestPerfEvent) o;

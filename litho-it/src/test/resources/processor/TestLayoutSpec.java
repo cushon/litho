@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,8 +16,6 @@
 
 package com.facebook.litho.processor.integration.resources;
 
-import android.annotation.TargetApi;
-import android.os.Build;
 import android.view.View;
 import androidx.annotation.Nullable;
 import com.facebook.litho.ClickEvent;
@@ -52,7 +50,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 @LayoutSpec(events = TestEvent.class, simpleNameDelegate = "child")
-@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
 public class TestLayoutSpec<S extends View> implements TestTag {
   @PropDefault protected static final boolean prop2 = true;
   @PropDefault protected static final List<String> names = new ArrayList<>();
@@ -69,6 +66,7 @@ public class TestLayoutSpec<S extends View> implements TestTag {
     return new TestTreeProp(prop6);
   }
 
+  @Nullable
   @OnCreateLayout
   static <S extends View> Component onCreateLayout(
       ComponentContext context,

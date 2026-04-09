@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,9 @@
 
 package com.facebook.litho.testing.assertj;
 
-import com.facebook.litho.LithoView;
+import com.facebook.infer.annotation.Nullsafe;
+import com.facebook.litho.BaseMountingView;
+import com.facebook.litho.config.LithoDebugConfigurations;
 import com.facebook.litho.testing.subcomponents.InspectableComponent;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,22 +33,29 @@ import org.assertj.core.util.Preconditions;
  *
  * <p>Components are extracted in a depth-first way so that they match the hierarchy indices when
  * going from top to bottom.
+ *
+ * @deprecated Use {@link LithoViewAssert#containsComponent)} instead.
  */
+@Nullsafe(Nullsafe.Mode.LOCAL)
+@Deprecated
 public final class LithoViewSubComponentDeepExtractor
-    implements Extractor<LithoView, List<InspectableComponent>> {
+    implements Extractor<BaseMountingView, List<InspectableComponent>> {
 
   private LithoViewSubComponentDeepExtractor() {}
 
   @Override
-  public List<InspectableComponent> extract(LithoView lithoView) {
+  public List<InspectableComponent> extract(BaseMountingView baseMountingView) {
     final List<InspectableComponent> res = new LinkedList<>();
     final Stack<InspectableComponent> stack = new Stack<>();
 
-    final InspectableComponent rootInstance = InspectableComponent.getRootInstance(lithoView);
-    Preconditions.checkNotNull(
-        rootInstance,
-        "Could not obtain DebugComponent. "
-            + "Please ensure that ComponentsConfiguration.IS_INTERNAL_BUILD is enabled.");
+    final InspectableComponent rootInstance =
+        InspectableComponent.getRootInstance(baseMountingView);
+    if (rootInstance == null) {
+      Preconditions.checkState(
+          LithoDebugConfigurations.isDebugModeEnabled,
+          "Please ensure that LithoDebugConfigurations.isDebugModeEnabled is enabled");
+      throw new IllegalStateException("Component rendered to <null>");
+    }
     stack.add(rootInstance);
 
     while (!stack.isEmpty()) {
@@ -65,13 +74,13 @@ public final class LithoViewSubComponentDeepExtractor
     return new LithoViewSubComponentDeepExtractor();
   }
 
-  public static Condition<LithoView> deepSubComponentWith(
+  public static Condition<BaseMountingView> deepSubComponentWith(
       final Condition<InspectableComponent> inner) {
-    return new Condition<LithoView>() {
+    return new Condition<BaseMountingView>() {
       @Override
-      public boolean matches(LithoView lithoView) {
+      public boolean matches(BaseMountingView baseMountingView) {
         as("deep sub component with <%s>", inner);
-        for (InspectableComponent component : subComponentsDeeply().extract(lithoView)) {
+        for (InspectableComponent component : subComponentsDeeply().extract(baseMountingView)) {
           if (inner.matches(component)) {
             return true;
           }

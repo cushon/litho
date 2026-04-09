@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,9 @@
  */
 
 apply plugin: 'com.android.library'
-apply plugin: 'maven'
+apply plugin: 'kotlin-android'
+apply plugin: 'org.jetbrains.dokka'
+apply plugin: 'com.facebook.kotlin.compilerplugins.dataclassgenerate'
 
 project.group = GROUP
 version = VERSION_NAME
@@ -24,11 +26,19 @@ android {
     compileSdkVersion rootProject.compileSdkVersion
     buildToolsVersion rootProject.buildToolsVersion
 
-    // We're on an old version of Robolectric which requires this, sadly.
-    useLibrary 'org.apache.http.legacy'
-
     defaultConfig {
         minSdkVersion rootProject.minSdkVersion
+    }
+
+    testOptions {
+        unitTests.includeAndroidResources = true
+
+        unitTests.all {
+            // Because of native libraries loading (Yoga), we can never reuse a class loader and
+            // need to fork a new process per class.
+            forkEvery = 1
+            maxParallelForks = 4
+        }
     }
 
     buildTypes {
@@ -41,20 +51,32 @@ android {
         }
 
         release {
-            buildConfigField 'boolean', internalBuildField, 'false';
+            buildConfigField 'boolean', internalBuildField, 'false'
             buildConfigField 'boolean', useIncrementalMountHelper, 'true'
         }
     }
-
-    // TODO(#62): Re-enable abort on error.
-    lintOptions {
+    buildFeatures {
+        buildConfig true
+    }
+    namespace 'com.facebook.litho'
+    lint {
         abortOnError false
     }
+
+    // TODO(#62): Re-enable abort on error.
 }
 
 dependencies {
     // Project dependencies
     api project(':litho-annotations')
+    api project(':litho-perf-logger')
+    api project(':litho-flexlayout')
+    api project(':litho-rendercore')
+    api project(':litho-rendercore-incremental-mount')
+    api project(':litho-rendercore-primitives')
+    implementation project(':litho-rendercore-text')
+    api project(':litho-rendercore-transitions')
+    api project(':litho-rendercore-visibility')
 
     // Annotations
     compileOnly deps.jsr305
@@ -62,11 +84,18 @@ dependencies {
     // of the POM.
     implementation deps.inferAnnotations
 
+    compileOnly deps.proguardAnnotations
+
     // Android Support Library
     compileOnly deps.supportAnnotations
+    implementation deps.supportFragment
+    implementation deps.supportCollection
     implementation deps.supportCore
     implementation deps.supportCustomView
     implementation deps.supportViewPager
+    implementation deps.supportViewPager2
+    implementation deps.supportDynamicAnimations
+    implementation deps.lifecycle
 
     // First-party dependencies
     if (project.isRelease()) {
@@ -74,12 +103,16 @@ dependencies {
     } else {
         api project(':yogajni')
     }
+
+    testImplementation deps.assertjCore
+    testImplementation deps.junit
+    testImplementation deps.robolectric
+    testImplementation deps.mockitokotlin
+    testImplementation deps.supportRecyclerView
+    testImplementation deps.supportTestJunit
+    testImplementation project(':litho-rendercore-testing')
+    testImplementation project(':litho-testing')
+    testImplementation project(':litho-widget-kotlin')
 }
 
-apply from: rootProject.file('gradle/release.gradle')
-
-task sourcesJar(type: Jar) {
-    from android.sourceSets.main.java.srcDirs
-    archiveClassifier.set('sources')
-}
-artifacts.add('archives', sourcesJar)
+apply plugin: "com.vanniktech.maven.publish"

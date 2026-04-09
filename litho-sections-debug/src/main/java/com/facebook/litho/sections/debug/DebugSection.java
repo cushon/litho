@@ -1,11 +1,11 @@
 /*
- * Copyright 2019-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,8 @@ package com.facebook.litho.sections.debug;
 import android.graphics.Rect;
 import android.view.View;
 import androidx.annotation.Nullable;
+import com.facebook.infer.annotation.Nullsafe;
+import com.facebook.litho.CollectionsUtils;
 import com.facebook.litho.StateContainer;
 import com.facebook.litho.sections.Section;
 import com.facebook.litho.sections.SectionDebugUtil;
@@ -31,6 +33,7 @@ import java.util.List;
  * purpose of this class is for tools such as Stetho's UI inspector to be able to insert Section
  * information when visualising a component hierarchy.
  */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 public final class DebugSection {
 
   private final List<View> mViews;
@@ -43,7 +46,7 @@ public final class DebugSection {
 
   /** The root represents a DebugSection with information about the root of the SectionTree. */
   public static @Nullable DebugSection getRootInstance(List<View> lithoViews) {
-    if (lithoViews == null || lithoViews.isEmpty()) {
+    if (CollectionsUtils.isNullOrEmpty(lithoViews)) {
       return null;
     }
 
@@ -51,6 +54,9 @@ public final class DebugSection {
     final Section renderInfoSection =
         (Section) RenderInfoDebugInfoRegistry.getRenderInfoSectionDebugInfo(lithoViews.get(0));
 
+    if (renderInfoSection == null) {
+      return null;
+    }
     return getRootDebugSection(renderInfoSection, lithoViews);
   }
 
@@ -85,6 +91,7 @@ public final class DebugSection {
       return childViews;
     } else {
       final List<DebugSection> childrenDebugSections = new ArrayList<>();
+      // NULLSAFE_FIXME[Nullable Dereference]
       for (Section child : mSectionDebugNode.getChildren()) {
         final DebugSection debugSection = new DebugSection(child, mViews);
         if (debugSection.getSectionChildren().size() > 0) {
@@ -111,6 +118,7 @@ public final class DebugSection {
   /**
    * @return a Rect containing the bounds of the views inside theSection represented by this node.
    */
+  @Nullable
   public Rect getBounds() {
     List<?> children = getSectionChildren();
     int count = children.size();
@@ -133,9 +141,13 @@ public final class DebugSection {
       DebugSection lastSection = (DebugSection) children.get(count - 1);
       Rect first = firstSection.getBounds();
       Rect last = lastSection.getBounds();
+      // NULLSAFE_FIXME[Nullable Dereference]
       rect.left = first.left;
+      // NULLSAFE_FIXME[Nullable Dereference]
       rect.top = first.top;
+      // NULLSAFE_FIXME[Nullable Dereference]
       rect.right = last.right;
+      // NULLSAFE_FIXME[Nullable Dereference]
       rect.bottom = last.bottom;
     }
 

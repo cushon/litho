@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,19 +16,19 @@
 
 package com.facebook.litho.testing.specmodels;
 
+import com.facebook.infer.annotation.Nullsafe;
 import com.facebook.litho.specmodels.internal.ImmutableList;
 import com.facebook.litho.specmodels.internal.RunMode;
 import com.facebook.litho.specmodels.model.BuilderMethodModel;
 import com.facebook.litho.specmodels.model.CachedValueParamModel;
 import com.facebook.litho.specmodels.model.DelegateMethod;
-import com.facebook.litho.specmodels.model.DependencyInjectionHelper;
 import com.facebook.litho.specmodels.model.EventDeclarationModel;
 import com.facebook.litho.specmodels.model.EventMethod;
 import com.facebook.litho.specmodels.model.FieldModel;
 import com.facebook.litho.specmodels.model.HasEnclosedSpecModel;
 import com.facebook.litho.specmodels.model.HasPureRender;
-import com.facebook.litho.specmodels.model.InjectPropModel;
 import com.facebook.litho.specmodels.model.InterStageInputParamModel;
+import com.facebook.litho.specmodels.model.PrepareInterStageInputParamModel;
 import com.facebook.litho.specmodels.model.PropDefaultModel;
 import com.facebook.litho.specmodels.model.PropJavadocModel;
 import com.facebook.litho.specmodels.model.PropModel;
@@ -54,6 +54,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 /** An implementation of SpecModel + Builder for testing purposes only. */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 @Immutable
 public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecModel {
   private final String mSpecName;
@@ -71,8 +72,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
       mUpdateStateWithTransitionMethods;
   private final ImmutableList<PropModel> mProps;
   private final ImmutableList<PropModel> mRawProps;
-  private final ImmutableList<InjectPropModel> mRawInjectProps;
-  private final ImmutableList<InjectPropModel> mInjectProps;
   private final ImmutableList<PropDefaultModel> mPropDefaults;
   private final ImmutableList<TypeVariableName> mTypeVariables;
   private final ImmutableList<StateParamModel> mStateValues;
@@ -85,8 +84,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
   private final String mClassJavadoc;
   private final ImmutableList<PropJavadocModel> mPropJavadocs;
   private final boolean mIsPublic;
-  private final boolean mHasInjectedDependencies;
-  @Nullable private final DependencyInjectionHelper mDependencyInjectionHelper;
   private final Object mRepresentedObject;
   private final TypeSpec mGeneratedTypeSpec;
   private final ClassName mContextClass;
@@ -119,8 +116,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
       ImmutableList<SpecMethodModel<UpdateStateMethod, Void>> updateStateWithTransitionMethods,
       ImmutableList<PropModel> rawProps,
       ImmutableList<PropModel> props,
-      ImmutableList<InjectPropModel> rawInjectProps,
-      ImmutableList<InjectPropModel> injectProps,
       ImmutableList<PropDefaultModel> propDefaults,
       ImmutableList<TypeVariableName> typeVariables,
       ImmutableList<StateParamModel> stateValues,
@@ -133,8 +128,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
       String classJavadoc,
       ImmutableList<PropJavadocModel> propJavadocs,
       boolean isPublic,
-      boolean hasInjectedDependencies,
-      @Nullable DependencyInjectionHelper dependencyInjectionHelper,
       Object representedObject,
       TypeSpec generatedTypeSpec,
       ClassName contextClass,
@@ -165,8 +158,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
     mUpdateStateWithTransitionMethods = updateStateWithTransitionMethods;
     mRawProps = rawProps;
     mProps = props;
-    mRawInjectProps = rawInjectProps;
-    mInjectProps = injectProps;
     mPropDefaults = propDefaults;
     mTypeVariables = typeVariables;
     mStateValues = stateValues;
@@ -179,8 +170,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
     mClassJavadoc = classJavadoc;
     mPropJavadocs = propJavadocs;
     mIsPublic = isPublic;
-    mHasInjectedDependencies = hasInjectedDependencies;
-    mDependencyInjectionHelper = dependencyInjectionHelper;
     mRepresentedObject = representedObject;
     mGeneratedTypeSpec = generatedTypeSpec;
     mContextClass = contextClass;
@@ -241,6 +230,7 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
 
   @Override
   @Nullable
+  // NULLSAFE_FIXME[Inconsistent Subclass Return Annotation]
   public SpecMethodModel<EventMethod, Void> getWorkingRangeRegisterMethod() {
     return mWorkingRangeRegisterMethod;
   }
@@ -272,16 +262,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
   }
 
   @Override
-  public ImmutableList<InjectPropModel> getRawInjectProps() {
-    return mRawInjectProps;
-  }
-
-  @Override
-  public ImmutableList<InjectPropModel> getInjectProps() {
-    return mInjectProps;
-  }
-
-  @Override
   public ImmutableList<PropDefaultModel> getPropDefaults() {
     return mPropDefaults;
   }
@@ -304,6 +284,11 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
   @Override
   public ImmutableList<InterStageInputParamModel> getInterStageInputs() {
     return mInterStageInputs;
+  }
+
+  @Override
+  public ImmutableList<PrepareInterStageInputParamModel> getPrepareInterStageInputs() {
+    return ImmutableList.of();
   }
 
   @Override
@@ -387,11 +372,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
   }
 
   @Override
-  public boolean hasInjectedDependencies() {
-    return mHasInjectedDependencies;
-  }
-
-  @Override
   public boolean shouldCheckIdInIsEquivalentToMethod() {
     return mShouldCheckIdInIsEquivalentToMethod;
   }
@@ -407,14 +387,18 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
   }
 
   @Override
+  public boolean shouldGenerateTransferState() {
+    return true;
+  }
+
+  @Override
   public boolean shouldGenerateCopyMethod() {
     return true;
   }
 
-  @Nullable
   @Override
-  public DependencyInjectionHelper getDependencyInjectionHelper() {
-    return mDependencyInjectionHelper;
+  public boolean isStateful() {
+    return mEnclosedSpecModel.isStateful();
   }
 
   @Override
@@ -456,11 +440,16 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
     return false;
   }
 
-  public static class Builder {
+  public static final class Builder {
+    // NULLSAFE_FIXME[Field Not Initialized]
     private String mSpecName;
+    // NULLSAFE_FIXME[Field Not Initialized]
     private ClassName mSpecTypeName;
+    // NULLSAFE_FIXME[Field Not Initialized]
     private String mComponentName;
+    // NULLSAFE_FIXME[Field Not Initialized]
     private TypeName mComponentTypeName;
+    // NULLSAFE_FIXME[Field Not Initialized]
     private ClassName mComponentClass;
     private ImmutableList<SpecMethodModel<DelegateMethod, Void>> mDelegateMethods =
         ImmutableList.of();
@@ -468,6 +457,7 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
         ImmutableList.of();
     private ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> mTriggerMethods =
         ImmutableList.of();
+    // NULLSAFE_FIXME[Field Not Initialized]
     private SpecMethodModel<EventMethod, Void> mWorkingRangeRegisterMethod;
     private ImmutableList<WorkingRangeMethodModel> mWorkingRangeMethods = ImmutableList.of();
     private ImmutableList<SpecMethodModel<UpdateStateMethod, Void>> mUpdateStateMethods =
@@ -476,8 +466,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
     private ImmutableList<SpecMethodModel<UpdateStateMethod, Void>>
         mUpdateStateWithTransitionMethods = ImmutableList.of();
     private ImmutableList<PropModel> mProps = ImmutableList.of();
-    private ImmutableList<InjectPropModel> mRawInjectProps = ImmutableList.of();
-    private ImmutableList<InjectPropModel> mInjectProps = ImmutableList.of();
     private ImmutableList<PropDefaultModel> mPropDefaults = ImmutableList.of();
     private ImmutableList<TypeVariableName> mTypeVariables = ImmutableList.of();
     private ImmutableList<StateParamModel> mStateValues = ImmutableList.of();
@@ -487,26 +475,35 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
     private ImmutableList<EventDeclarationModel> mEventDeclarations = ImmutableList.of();
     private ImmutableList<BuilderMethodModel> mImplicitBuilderMethods = ImmutableList.of();
     private ImmutableList<RenderDataDiffModel> mDiffs = ImmutableList.of();
+    // NULLSAFE_FIXME[Field Not Initialized]
     private String mClassJavadoc;
     private ImmutableList<PropJavadocModel> mPropJavadocs = ImmutableList.of();
     private boolean mIsPublic;
-    private boolean mHasInjectedDependencies;
-    private DependencyInjectionHelper mDependencyInjectionHelper;
+    // NULLSAFE_FIXME[Field Not Initialized]
     private Object mRepresentedObject;
+    // NULLSAFE_FIXME[Field Not Initialized]
     private TypeSpec mGeneratedTypeSpec;
+    // NULLSAFE_FIXME[Field Not Initialized]
     private ClassName mContextClass;
+    // NULLSAFE_FIXME[Field Not Initialized]
     private ClassName mStateContainerClass;
+    // NULLSAFE_FIXME[Field Not Initialized]
     private ClassName mTransitionClass;
+    // NULLSAFE_FIXME[Field Not Initialized]
     private ClassName mTransitionContainerClass;
     private boolean mHasDeepCopy;
     private boolean mShouldCheckIdInIsEquivalentToMethod;
+    // NULLSAFE_FIXME[Field Not Initialized]
     private String mScopeMethodName;
     private boolean mIsStylingSupported;
     private List<SpecModelValidationError> mSpecModelValidationErrors = ImmutableList.of();
+    // NULLSAFE_FIXME[Field Not Initialized]
     private ImmutableList<AnnotationSpec> mClassAnnotations;
     private ImmutableList<TagModel> mTags = ImmutableList.of();
+    // NULLSAFE_FIXME[Field Not Initialized]
     private SpecElementType mSpecElementType;
     private boolean mIsPureRender;
+    // NULLSAFE_FIXME[Field Not Initialized]
     private SpecModel mEnclosedSpecModel;
 
     public Builder specName(String specName) {
@@ -585,16 +582,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
       return this;
     }
 
-    public Builder rawInjectProps(ImmutableList<InjectPropModel> rawInjectProps) {
-      mRawInjectProps = rawInjectProps;
-      return this;
-    }
-
-    public Builder injectProps(ImmutableList<InjectPropModel> injectProps) {
-      mInjectProps = injectProps;
-      return this;
-    }
-
     public Builder propDefaults(ImmutableList<PropDefaultModel> propDefaults) {
       mPropDefaults = propDefaults;
       return this;
@@ -653,16 +640,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
 
     public Builder isPublic(boolean isPublic) {
       mIsPublic = isPublic;
-      return this;
-    }
-
-    public Builder hasInjectedDependencies(boolean hasInjectedDependencies) {
-      mHasInjectedDependencies = hasInjectedDependencies;
-      return this;
-    }
-
-    public Builder dependencyInjectionHelper(DependencyInjectionHelper dependencyInjectionHelper) {
-      mDependencyInjectionHelper = dependencyInjectionHelper;
       return this;
     }
 
@@ -768,8 +745,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
           mUpdateStateWithTransitionMethods,
           mRawProps,
           mProps,
-          mRawInjectProps,
-          mInjectProps,
           mPropDefaults,
           mTypeVariables,
           mStateValues,
@@ -782,8 +757,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
           mClassJavadoc,
           mPropJavadocs,
           mIsPublic,
-          mHasInjectedDependencies,
-          mDependencyInjectionHelper,
           mRepresentedObject,
           mGeneratedTypeSpec,
           mContextClass,
@@ -803,12 +776,11 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
       if (this == o) return true;
       if (o == null || getClass() != o.getClass()) return false;
       final Builder builder = (Builder) o;
       return mIsPublic == builder.mIsPublic
-          && mHasInjectedDependencies == builder.mHasInjectedDependencies
           && mHasDeepCopy == builder.mHasDeepCopy
           && mShouldCheckIdInIsEquivalentToMethod == builder.mShouldCheckIdInIsEquivalentToMethod
           && mIsStylingSupported == builder.mIsStylingSupported
@@ -838,7 +810,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
           && Objects.equals(mDiffs, builder.mDiffs)
           && Objects.equals(mClassJavadoc, builder.mClassJavadoc)
           && Objects.equals(mPropJavadocs, builder.mPropJavadocs)
-          && Objects.equals(mDependencyInjectionHelper, builder.mDependencyInjectionHelper)
           && Objects.equals(mRepresentedObject, builder.mRepresentedObject)
           && Objects.equals(mGeneratedTypeSpec, builder.mGeneratedTypeSpec)
           && Objects.equals(mContextClass, builder.mContextClass)
@@ -882,8 +853,6 @@ public class MockSpecModel implements SpecModel, HasPureRender, HasEnclosedSpecM
           mClassJavadoc,
           mPropJavadocs,
           mIsPublic,
-          mHasInjectedDependencies,
-          mDependencyInjectionHelper,
           mRepresentedObject,
           mGeneratedTypeSpec,
           mContextClass,

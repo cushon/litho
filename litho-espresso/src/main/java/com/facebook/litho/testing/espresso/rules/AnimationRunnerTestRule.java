@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,6 +17,7 @@
 package com.facebook.litho.testing.espresso.rules;
 
 import androidx.test.InstrumentationRegistry;
+import com.facebook.infer.annotation.Nullsafe;
 import com.facebook.litho.choreographercompat.ChoreographerCompatImpl;
 import com.facebook.litho.dataflow.DataFlowGraph;
 import com.facebook.litho.dataflow.MockTimingSource;
@@ -26,10 +27,12 @@ import org.junit.rules.ExternalResource;
 /**
  * A test rule for instrumentation and screenshot tests that need control over animation driving.
  */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 public class AnimationRunnerTestRule extends ExternalResource {
 
   public static final int FRAME_TIME_MS = MockTimingSource.FRAME_TIME_MS;
 
+  // NULLSAFE_FIXME[Field Not Initialized]
   private MockTimingSource mFakeTimingSource;
 
   @Override

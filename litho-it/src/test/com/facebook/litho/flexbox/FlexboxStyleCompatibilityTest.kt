@@ -1,0 +1,66 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.facebook.litho.flexbox
+
+import com.facebook.litho.LithoView
+import com.facebook.litho.Row
+import com.facebook.litho.Style
+import com.facebook.litho.assertMatches
+import com.facebook.litho.core.height
+import com.facebook.litho.core.width
+import com.facebook.litho.kotlinStyle
+import com.facebook.litho.match
+import com.facebook.litho.testing.LithoTestRule
+import com.facebook.litho.testing.testrunner.LithoTestRunner
+import com.facebook.litho.testing.unspecified
+import com.facebook.rendercore.px
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/** Unit tests interop between Spec Components and flexbox [Style] properties. */
+@RunWith(LithoTestRunner::class)
+class FlexboxStyleCompatibilityTest {
+
+  @Rule @JvmField val lithoTestRule = LithoTestRule()
+
+  @Test
+  fun specComponent_whenKotlinStyleSetOnBuilder_commonPropsAreApplied() {
+    lithoTestRule
+        .render(widthSpec = unspecified(), heightSpec = unspecified()) {
+          Row.create(lithoTestRule.context)
+              .wrapInView()
+              .kotlinStyle(Style.width(100.px).height(100.px))
+              .build()
+        }
+        .assertMatches(match<LithoView> { bounds(0, 0, 100, 100) })
+  }
+
+  @Test
+  fun specComponent_whenKotlinStyleSetOnBuilderThenOverriden_overriddenValuesApply() {
+    lithoTestRule
+        .render(widthSpec = unspecified(), heightSpec = unspecified()) {
+          Row.create(lithoTestRule.context)
+              .wrapInView()
+              .kotlinStyle(Style.width(100.px).height(100.px))
+              .widthPx(50)
+              .heightPx(50)
+              .build()
+        }
+        .assertMatches(match<LithoView> { bounds(0, 0, 50, 50) })
+  }
+}

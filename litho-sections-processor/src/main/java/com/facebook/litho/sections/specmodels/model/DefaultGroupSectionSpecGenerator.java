@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,6 +18,7 @@ package com.facebook.litho.sections.specmodels.model;
 
 import com.facebook.litho.specmodels.generator.BuilderGenerator;
 import com.facebook.litho.specmodels.generator.CachedValueGenerator;
+import com.facebook.litho.specmodels.generator.ClassAnnotationsGenerator;
 import com.facebook.litho.specmodels.generator.ComponentBodyGenerator;
 import com.facebook.litho.specmodels.generator.DelegateMethodGenerator;
 import com.facebook.litho.specmodels.generator.EventGenerator;
@@ -57,7 +58,8 @@ public class DefaultGroupSectionSpecGenerator implements SpecGenerator<GroupSect
     final TypeSpec.Builder typeSpec =
         TypeSpec.classBuilder(specModel.getComponentName())
             .superclass(SectionClassNames.SECTION)
-            .addTypeVariables(specModel.getTypeVariables());
+            .addTypeVariables(specModel.getTypeVariables())
+            .addModifiers(Modifier.FINAL);
 
     if (SpecModelUtils.isTypeElement(specModel)) {
       typeSpec.addOriginatingElement((TypeElement) specModel.getRepresentedObject());
@@ -67,15 +69,12 @@ public class DefaultGroupSectionSpecGenerator implements SpecGenerator<GroupSect
       typeSpec.addModifiers(Modifier.PUBLIC);
     }
 
-    if (!specModel.hasInjectedDependencies()) {
-      typeSpec.addModifiers(Modifier.FINAL);
-    }
-
     TypeSpecDataHolder.newBuilder()
         .addTypeSpecDataHolder(JavadocGenerator.generate(specModel))
+        .addTypeSpecDataHolder(ClassAnnotationsGenerator.generate(specModel))
         .addTypeSpecDataHolder(PreambleGenerator.generate(specModel))
         .addTypeSpecDataHolder(
-            ComponentBodyGenerator.generate(specModel, specModel.getServiceParam()))
+            ComponentBodyGenerator.generate(specModel, specModel.getServiceParam(), runMode))
         .addTypeSpecDataHolder(BuilderGenerator.generate(specModel))
         .addTypeSpecDataHolder(StateGenerator.generate(specModel))
         .addTypeSpecDataHolder(EventGenerator.generate(specModel))
@@ -84,10 +83,10 @@ public class DefaultGroupSectionSpecGenerator implements SpecGenerator<GroupSect
                 specModel,
                 DelegateMethodDescriptions.getGroupSectionSpecDelegatesMap(specModel),
                 runMode))
-        .addTypeSpecDataHolder(TreePropGenerator.generate(specModel))
+        .addTypeSpecDataHolder(TreePropGenerator.generate(specModel, runMode))
         .addTypeSpecDataHolder(TriggerGenerator.generate(specModel))
         .addTypeSpecDataHolder(TagGenerator.generate(specModel, mBlacklistedTagInterfaces))
-        .addTypeSpecDataHolder(CachedValueGenerator.generate(specModel))
+        .addTypeSpecDataHolder(CachedValueGenerator.generate(specModel, runMode))
         .build()
         .addToTypeSpec(typeSpec);
 

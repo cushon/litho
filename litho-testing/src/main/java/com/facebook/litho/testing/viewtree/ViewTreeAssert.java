@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,22 +24,25 @@ import static com.facebook.litho.testing.viewtree.ViewPredicates.isVisible;
 import android.graphics.drawable.Drawable;
 import android.view.View;
 import android.widget.TextView;
+import androidx.test.core.app.ApplicationProvider;
+import com.facebook.infer.annotation.Nullsafe;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import javax.annotation.Nullable;
 import org.assertj.core.api.AbstractAssert;
-import org.assertj.core.api.Java6Assertions;
-import org.robolectric.RuntimeEnvironment;
+import org.assertj.core.api.Assertions;
 
 /**
  * Assertions which require checking an entire view tree
  *
- * NOTE: Assertions looking for visible attributes are limited to checking the visibility of the
- * nodes, but do not check actual layout. So a visible view might have 0 pixels available for it
- * in actual app code and still pass the checks done here
+ * <p>NOTE: Assertions looking for visible attributes are limited to checking the visibility of the
+ * nodes, but do not check actual layout. So a visible view might have 0 pixels available for it in
+ * actual app code and still pass the checks done here
  */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTree> {
 
   private ViewTreeAssert(final ViewTree actual) {
@@ -60,7 +63,8 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
   public ViewTreeAssert hasVisibleText(final String text) {
     final ImmutableList<View> path = getPathToVisibleText(text);
 
-    Java6Assertions.assertThat(path)
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(path == null ? getHasVisibleTextErrorMessage(text) : "")
         .isNotNull();
 
@@ -68,16 +72,17 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
   }
 
   private String getHasVisibleTextErrorMessage(final String text) {
-    String errorMsg = String.format(
-        "Cannot find text \"%s\" in view hierarchy:%n%s. ",
-        text,
-        actual.makeString(GET_TEXT_FUNCTION));
+    String errorMsg =
+        String.format(
+            "Cannot find text \"%s\" in view hierarchy:%n%s. ",
+            text, Preconditions.checkNotNull(actual).makeString(GET_TEXT_FUNCTION));
 
     final ImmutableList<View> similarPath = getPathToVisibleSimilarText(text);
     if (similarPath != null) {
-      errorMsg += String.format(
-          "\nHowever, a near-match was found: \"%s\"",
-          GET_TEXT_FUNCTION.apply(similarPath.get(similarPath.size() - 1)));
+      errorMsg +=
+          String.format(
+              "\nHowever, a near-match was found: \"%s\"",
+              GET_TEXT_FUNCTION.apply(similarPath.get(similarPath.size() - 1)));
     } else {
       errorMsg += "\nNo near-match was found.";
     }
@@ -94,16 +99,18 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
    * @param tagValue the expected value of the tag associated with tagId
    * @return the assertions object
    */
-  public ViewTreeAssert hasVisibleTextWithTag(final String text, final int tagId, final Object tagValue) {
+  public ViewTreeAssert hasVisibleTextWithTag(
+      final String text, final int tagId, final Object tagValue) {
     final ImmutableList<View> path = getPathToVisibleTextWithTag(text, tagId, tagValue);
 
-    Java6Assertions.assertThat(path)
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(
             "Cannot find text \"%s\" with tagId \"%d\" and value:%s in view hierarchy:%n%s",
             text,
             tagId,
             tagValue.toString(),
-            actual.makeString(GET_TEXT_FUNCTION))
+            Preconditions.checkNotNull(actual).makeString(GET_TEXT_FUNCTION))
         .isNotNull();
 
     return this;
@@ -117,10 +124,7 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
    */
   public ViewTreeAssert hasVisibleText(final int resourceId) {
     return hasVisibleText(
-        RuntimeEnvironment
-            .application
-            .getResources()
-            .getString(resourceId));
+        ApplicationProvider.getApplicationContext().getResources().getString(resourceId));
   }
 
   /**
@@ -133,11 +137,10 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
   public ViewTreeAssert doesNotHaveVisibleText(final String text) {
     final ImmutableList<View> path = getPathToVisibleText(text);
 
-    Java6Assertions.assertThat(path)
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(
-            "Found text \"%s\" in view hierarchy for path: %s",
-            text,
-            makeString(path))
+            "Found text \"%s\" in view hierarchy for path: %s", text, makeString(path))
         .isNull();
 
     return this;
@@ -145,6 +148,7 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
 
   /**
    * Tests if any view hierarchy under the root has the given view tag and value.
+   *
    * @param tagId the id to look for
    * @param tagValue the value that the id should have
    * @return the assertions object
@@ -152,12 +156,14 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
   public ViewTreeAssert hasViewTag(final int tagId, final Object tagValue) {
     final ImmutableList<View> path = getPathToViewTag(tagId, tagValue);
 
-    Java6Assertions.assertThat(path)
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(
             "Cannot find tag id \"%d\" with tag value \"%s\" in view hierarchy:%n%s",
             tagId,
             tagValue,
-            actual.makeString(ViewExtractors.generateGetViewTagFunction(tagId)))
+            Preconditions.checkNotNull(actual)
+                .makeString(ViewExtractors.generateGetViewTagFunction(tagId)))
         .isNotNull();
 
     return this;
@@ -165,18 +171,44 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
 
   /**
    * Tests if any view hierarchy under the root has the given contentDescription.
+   *
    * @param contentDescription the contentDescription to search for
    * @return the assertions object
    */
   public ViewTreeAssert hasContentDescription(final String contentDescription) {
     final ImmutableList<View> path = getPathToContentDescription(contentDescription);
 
-    Java6Assertions.assertThat(path)
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(
             "Cannot find content description \"%s\" in view hierarchy:%n%s",
             contentDescription,
-            actual.makeString(ViewExtractors.GET_CONTENT_DESCRIPTION_FUNCTION))
+            Preconditions.checkNotNull(actual)
+                .makeString(ViewExtractors.GET_CONTENT_DESCRIPTION_FUNCTION))
         .isNotNull();
+
+    return this;
+  }
+
+  /**
+   * Tests if any view hierarchy under the root do not has the given contentDescription.
+   *
+   * @param contentDescription the contentDescription to search for
+   * @return the assertions object
+   */
+  public ViewTreeAssert hasNoContentDescription(final String contentDescription) {
+    final ImmutableList<View> path = getPathToContentDescription(contentDescription);
+
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
+        .overridingErrorMessage(
+            "Found content description \"%s\" in view hierarchy:%n%s while the content description"
+                + " should not exist. ",
+            contentDescription,
+            Preconditions.checkNotNull(actual)
+                .makeString(ViewExtractors.GET_CONTENT_DESCRIPTION_FUNCTION),
+            path)
+        .isNull();
 
     return this;
   }
@@ -190,58 +222,66 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
    */
   public ViewTreeAssert doesNotHaveVisibleText(final int resourceId) {
     return doesNotHaveVisibleText(
-        RuntimeEnvironment
-            .application
-            .getResources()
-            .getString(resourceId));
+        ApplicationProvider.getApplicationContext().getResources().getString(resourceId));
   }
 
   /**
    * Tests if any view hierarchy under the root has the given contentDescription.
+   *
    * @param resourceId the resId of the contentDescription to search for
    * @return the assertions object
    */
   public ViewTreeAssert hasContentDescription(final int resourceId) {
     return hasContentDescription(
-        RuntimeEnvironment
-            .application
-            .getResources()
-            .getString(resourceId));
+        ApplicationProvider.getApplicationContext().getResources().getString(resourceId));
   }
 
+  @Nullable
   private ImmutableList<View> getPathToVisibleSimilarText(final String text) {
-    return actual.findChild(
-        Predicates.and(
-            isVisible(),
-            hasTextMatchingPredicate(new Predicate<String>() {
-          @Override
-          public boolean apply(@Nullable final String input) {
-            final int maxEditDistance = Math.max(3, text.length() / 4);
-            return LevenshteinDistance.getLevenshteinDistance(text, input, maxEditDistance)
-                <= maxEditDistance;
-          }
-        })),
-        ViewPredicates.isVisible());
+    return Preconditions.checkNotNull(actual)
+        .findChild(
+            Predicates.and(
+                isVisible(),
+                hasTextMatchingPredicate(
+                    new Predicate<String>() {
+                      @Override
+                      public boolean apply(@Nullable final String input) {
+                        if (input == null) {
+                          return false;
+                        }
+                        final int maxEditDistance = Math.max(3, text.length() / 4);
+                        return LevenshteinDistance.getLevenshteinDistance(
+                                text, input, maxEditDistance)
+                            <= maxEditDistance;
+                      }
+                    })),
+            ViewPredicates.isVisible());
   }
 
   private ImmutableList<View> getPathToVisibleText(final String text) {
-    return actual.findChild(
-        ViewPredicates.hasVisibleText(text),
-        ViewPredicates.isVisible());
+    return Preconditions.checkNotNull(actual)
+        // NULLSAFE_FIXME[Return Not Nullable]
+        .findChild(ViewPredicates.hasVisibleText(text), ViewPredicates.isVisible());
   }
 
-  private ImmutableList<View> getPathToVisibleTextWithTag(final String text, final int tagId, final Object tagValue) {
-    return actual.findChild(
-        ViewPredicates.hasVisibleTextWithTag(text, tagId, tagValue),
-        ViewPredicates.isVisible());
+  private ImmutableList<View> getPathToVisibleTextWithTag(
+      final String text, final int tagId, final Object tagValue) {
+    return Preconditions.checkNotNull(actual)
+        // NULLSAFE_FIXME[Return Not Nullable]
+        .findChild(
+            ViewPredicates.hasVisibleTextWithTag(text, tagId, tagValue),
+            ViewPredicates.isVisible());
   }
 
   private ImmutableList<View> getPathToViewTag(final int tagId, final Object tagValue) {
-    return actual.findChild(ViewPredicates.hasTag(tagId, tagValue));
+    // NULLSAFE_FIXME[Return Not Nullable]
+    return Preconditions.checkNotNull(actual).findChild(ViewPredicates.hasTag(tagId, tagValue));
   }
 
   private ImmutableList<View> getPathToContentDescription(final String contentDescription) {
-    return actual.findChild(ViewPredicates.hasContentDescription(contentDescription));
+    return Preconditions.checkNotNull(actual)
+        // NULLSAFE_FIXME[Return Not Nullable]
+        .findChild(ViewPredicates.hasContentDescription(contentDescription));
   }
 
   /**
@@ -254,11 +294,11 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
   public ViewTreeAssert hasVisibleTextMatching(final String pattern) {
     final ImmutableList<View> path = getPathToVisibleMatchingText(pattern);
 
-    Java6Assertions.assertThat(path)
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(
             "Cannot find text matching \"%s\" in view hierarchy:%n%s",
-            pattern,
-            actual.makeString(GET_TEXT_FUNCTION))
+            pattern, Preconditions.checkNotNull(actual).makeString(GET_TEXT_FUNCTION))
         .isNotNull();
 
     return this;
@@ -274,11 +314,10 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
   public ViewTreeAssert doesNotHaveVisibleTextMatching(final String pattern) {
     final ImmutableList<View> path = getPathToVisibleMatchingText(pattern);
 
-    Java6Assertions.assertThat(path)
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(
-            "Found pattern \"%s\" in view hierarchy for path: %s",
-            pattern,
-            makeString(path))
+            "Found pattern \"%s\" in view hierarchy for path: %s", pattern, makeString(path))
         .isNull();
 
     return this;
@@ -293,11 +332,11 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
   public ViewTreeAssert doesNotHaveVisibleText() {
     final ImmutableList<View> path = getPathToVisibleMatchingText(".+");
 
-    Java6Assertions.assertThat(path)
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(
             "Found text \"%s\" in view hierarchy for path: %s",
-            getTextProof(path),
-            makeString(path))
+            getTextProof(path), makeString(path))
         .isNull();
 
     return this;
@@ -313,9 +352,9 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
   }
 
   private ImmutableList<View> getPathToVisibleMatchingText(final String pattern) {
-    return actual.findChild(
-        ViewPredicates.hasVisibleMatchingText(pattern),
-        ViewPredicates.isVisible());
+    return Preconditions.checkNotNull(actual)
+        // NULLSAFE_FIXME[Return Not Nullable]
+        .findChild(ViewPredicates.hasVisibleMatchingText(pattern), ViewPredicates.isVisible());
   }
 
   private String makeString(final Iterable<View> path) {
@@ -326,19 +365,15 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
    * Tests if any view in the hierarchy under the root, for which the path is visible, is displaying
    * the requested drawable by the given resource id.
    *
-   * For this assertion to work, Robolectric must be immediately available and be able to load the
-   * drawable corresponding to this resource id.
+   * <p>For this assertion to work, Robolectric must be immediately available and be able to load
+   * the drawable corresponding to this resource id.
    *
    * @param resourceId the resource id of the drawable to look for
    * @return the assertions object
    */
   public ViewTreeAssert hasVisibleDrawable(final int resourceId) {
     hasVisibleDrawable(
-        RuntimeEnvironment
-            .application
-            .getResources()
-            .getDrawable(resourceId)
-    );
+        ApplicationProvider.getApplicationContext().getResources().getDrawable(resourceId));
     return this;
   }
 
@@ -352,32 +387,28 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
   public ViewTreeAssert hasVisibleDrawable(final Drawable drawable) {
     final ImmutableList<View> path = getPathToVisibleWithDrawable(drawable);
 
-    Java6Assertions.assertThat(path)
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(
             "Did not find drawable %s in view hierarchy:%n%s",
             drawable,
-            actual.makeString(ViewExtractors.GET_DRAWABLE_FUNCTION))
+            Preconditions.checkNotNull(actual).makeString(ViewExtractors.GET_DRAWABLE_FUNCTION))
         .isNotNull();
 
     return this;
   }
 
   /**
-   * Tests all views in the hierarchy under the root, for which the path is visible, do not have
-   * the requested drawable by the given resource id.
-   * For this assertion to work, Robolectric must be immediately available and be able to load the
-   * drawable corresponding to this resource id.
+   * Tests all views in the hierarchy under the root, for which the path is visible, do not have the
+   * requested drawable by the given resource id. For this assertion to work, Robolectric must be
+   * immediately available and be able to load the drawable corresponding to this resource id.
    *
    * @param resourceId the resource id of the drawable to look for
    * @return the assertions object
    */
   public ViewTreeAssert doesNotHaveVisibleDrawable(final int resourceId) {
     doesNotHaveVisibleDrawable(
-        RuntimeEnvironment
-            .application
-            .getResources()
-            .getDrawable(resourceId)
-    );
+        ApplicationProvider.getApplicationContext().getResources().getDrawable(resourceId));
     return this;
   }
 
@@ -391,11 +422,12 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
   public ViewTreeAssert doesNotHaveVisibleDrawable(final Drawable drawable) {
     final ImmutableList<View> path = getPathToVisibleWithDrawable(drawable);
 
-    Java6Assertions.assertThat(path)
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(
             "Found drawable %s in view hierarchy:%n%s",
             drawable,
-            actual.makeString(ViewExtractors.GET_DRAWABLE_FUNCTION))
+            Preconditions.checkNotNull(actual).makeString(ViewExtractors.GET_DRAWABLE_FUNCTION))
         .isNull();
 
     return this;
@@ -405,12 +437,13 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
   public ViewTreeAssert hasVisibleViewWithId(final int viewId) {
     final ImmutableList<View> path = getPathToVisibleWithId(viewId);
 
-    Java6Assertions.assertThat(path)
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(
             "Did not find visible view with id \"%s=%d\":%n%s",
             ViewTreeUtil.getResourceName(viewId),
             viewId,
-            actual.makeString(ViewExtractors.GET_VIEW_ID_FUNCTION))
+            Preconditions.checkNotNull(actual).makeString(ViewExtractors.GET_VIEW_ID_FUNCTION))
         .isNotNull();
 
     return this;
@@ -420,30 +453,33 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
   public ViewTreeAssert doesNotHaveVisibleViewWithId(final int viewId) {
     final ImmutableList<View> path = getPathToVisibleWithId(viewId);
 
-    Java6Assertions.assertThat(path)
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(
             "Found visible view with id \"%s=%d\":%n%s",
             ViewTreeUtil.getResourceName(viewId),
             viewId,
-            actual.makeString(ViewExtractors.GET_VIEW_ID_FUNCTION))
+            Preconditions.checkNotNull(actual).makeString(ViewExtractors.GET_VIEW_ID_FUNCTION))
         .isNull();
 
     return this;
   }
 
-  public <V extends View> ViewTreeAssert hasVisible(final Class<V> clazz, final Predicate<V> predicate) {
-    final Predicate<View> conjunction = Predicates.and(
-        Predicates.instanceOf(clazz),
-        ViewPredicates.isVisible(),
-        (Predicate<View>) predicate);
+  public <V extends View> ViewTreeAssert hasVisible(
+      final Class<V> clazz, final Predicate<V> predicate) {
+    final Predicate<View> conjunction =
+        Predicates.and(
+            Predicates.instanceOf(clazz), ViewPredicates.isVisible(), (Predicate<View>) predicate);
 
-    final ImmutableList<View> path = actual.findChild(
-        conjunction,
-        ViewPredicates.isVisible());
+    final ImmutableList<View> path =
+        Preconditions.checkNotNull(actual).findChild(conjunction, ViewPredicates.isVisible());
 
-    Java6Assertions.assertThat(path)
+    // NULLSAFE_FIXME[Parameter Not Nullable]
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(
             "Did not find view for which given predicate is true in view hierarchy:%n%s",
+            // NULLSAFE_FIXME[Parameter Not Nullable]
             actual.makeString(null))
         .isNotNull();
 
@@ -455,13 +491,15 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
     final Predicate<View> conjunction =
         Predicates.and(Predicates.instanceOf(clazz), ViewPredicates.isVisible(), predicate);
 
-    final ImmutableList<View> path = actual.findChild(
-        conjunction,
-        ViewPredicates.isVisible());
+    final ImmutableList<View> path =
+        Preconditions.checkNotNull(actual).findChild(conjunction, ViewPredicates.isVisible());
 
-    Java6Assertions.assertThat(path)
+    // NULLSAFE_FIXME[Parameter Not Nullable]
+    Assertions.assertThat(path)
+        // NULLSAFE_FIXME[Not Vetted Third-Party]
         .overridingErrorMessage(
             "Found a view for which given predicate is true in view hierarchy:%n%s",
+            // NULLSAFE_FIXME[Parameter Not Nullable]
             actual.makeString(null))
         .isNull();
 
@@ -469,12 +507,13 @@ public final class ViewTreeAssert extends AbstractAssert<ViewTreeAssert, ViewTre
   }
 
   private ImmutableList<View> getPathToVisibleWithDrawable(final Drawable drawable) {
-    return actual.findChild(
-        ViewPredicates.hasVisibleDrawable(drawable),
-        ViewPredicates.isVisible());
+    return Preconditions.checkNotNull(actual)
+        // NULLSAFE_FIXME[Return Not Nullable]
+        .findChild(ViewPredicates.hasVisibleDrawable(drawable), ViewPredicates.isVisible());
   }
 
   private ImmutableList<View> getPathToVisibleWithId(final int viewId) {
-    return actual.findChild(hasVisibleId(viewId), isVisible());
+    // NULLSAFE_FIXME[Return Not Nullable]
+    return Preconditions.checkNotNull(actual).findChild(hasVisibleId(viewId), isVisible());
   }
 }

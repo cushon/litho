@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,42 +20,34 @@ import android.content.Context;
 import android.view.View;
 import androidx.annotation.AttrRes;
 import androidx.annotation.StyleRes;
+import com.facebook.infer.annotation.Nullsafe;
 import com.facebook.litho.Component;
 import com.facebook.litho.ComponentContext;
 import com.facebook.litho.ComponentLayout;
+import com.facebook.litho.InterStagePropsContainer;
 import com.facebook.litho.Size;
 import com.facebook.litho.SizeSpec;
 import javax.annotation.Nullable;
 
+/**
+ * @deprecated Component should not be directly subclassed, write a layout spec or mount spec
+ *     instead
+ */
+@Nullsafe(Nullsafe.Mode.LOCAL)
+@Deprecated
 public class TestViewComponent extends TestComponent {
-  
-  private final boolean mCallsShouldUpdateOnMount;
+
   private final boolean mIsPureRender;
   private final boolean mCanMeasure;
   private final boolean mHasChildLithoViews;
   @Nullable private View mTestView;
 
-  private TestViewComponent(
-      boolean callsShouldUpdateOnMount,
-      boolean isPureRender,
-      boolean canMeasure,
-      boolean hasChildLithoViews) {
+  private TestViewComponent(boolean isPureRender, boolean canMeasure, boolean hasChildLithoViews) {
     super("TestViewComponent");
 
-    mCallsShouldUpdateOnMount = callsShouldUpdateOnMount;
     mIsPureRender = isPureRender;
     mCanMeasure = canMeasure;
     mHasChildLithoViews = hasChildLithoViews;
-  }
-
-  @Override
-  public boolean shouldUpdate(Component previous, Component next) {
-    return !next.equals(previous);
-  }
-
-  @Override
-  protected boolean callsShouldUpdateOnMount() {
-    return mCallsShouldUpdateOnMount;
   }
 
   @Override
@@ -74,12 +66,18 @@ public class TestViewComponent extends TestComponent {
   }
 
   @Override
-  protected void onMount(ComponentContext c, Object convertView) {
+  protected void onMount(
+      @Nullable ComponentContext c,
+      Object convertView,
+      @Nullable InterStagePropsContainer interStagePropsContainer) {
     onMountCalled();
   }
 
   @Override
-  protected void onUnmount(ComponentContext c, Object mountedContent) {
+  protected void onUnmount(
+      @Nullable ComponentContext c,
+      Object mountedContent,
+      @Nullable InterStagePropsContainer interStagePropsContainer) {
     onUnmountCalled();
   }
 
@@ -90,7 +88,12 @@ public class TestViewComponent extends TestComponent {
 
   @Override
   protected void onMeasure(
-      ComponentContext c, ComponentLayout layout, int widthSpec, int heightSpec, Size size) {
+      ComponentContext c,
+      ComponentLayout layout,
+      int widthSpec,
+      int heightSpec,
+      Size size,
+      @Nullable InterStagePropsContainer interStagePropsContainer) {
     int width = SizeSpec.getSize(widthSpec);
     int height = SizeSpec.getSize(heightSpec);
 
@@ -101,17 +104,26 @@ public class TestViewComponent extends TestComponent {
   }
 
   @Override
-  protected void onBoundsDefined(ComponentContext c, ComponentLayout layout) {
+  protected void onBoundsDefined(
+      ComponentContext c,
+      ComponentLayout layout,
+      @Nullable InterStagePropsContainer interStagePropsContainer) {
     onDefineBoundsCalled();
   }
 
   @Override
-  protected void onBind(ComponentContext c, Object mountedContent) {
+  protected void onBind(
+      @Nullable ComponentContext c,
+      Object mountedContent,
+      @Nullable InterStagePropsContainer interStagePropsContainer) {
     onBindCalled();
   }
 
   @Override
-  protected void onUnbind(ComponentContext c, Object mountedContent) {
+  protected void onUnbind(
+      @Nullable ComponentContext c,
+      Object mountedContent,
+      @Nullable InterStagePropsContainer interStagePropsContainer) {
     onUnbindCalled();
   }
 
@@ -121,17 +133,14 @@ public class TestViewComponent extends TestComponent {
   }
 
   public static Builder create(
-      ComponentContext context,
-      @AttrRes int defStyleAttr,
-      @StyleRes int defStyleRes) {
-    return create(context, defStyleAttr, defStyleRes, true, true, true, true);
+      ComponentContext context, @AttrRes int defStyleAttr, @StyleRes int defStyleRes) {
+    return create(context, defStyleAttr, defStyleRes, true, true, true);
   }
 
   public static Builder create(
       ComponentContext context,
       @AttrRes int defStyleAttr,
       @StyleRes int defStyleRes,
-      boolean callsShouldUpdateOnMount,
       boolean isPureRender,
       boolean canMeasure,
       boolean canMountIncrementally) {
@@ -139,28 +148,19 @@ public class TestViewComponent extends TestComponent {
         context,
         defStyleAttr,
         defStyleRes,
-        new TestViewComponent(
-            callsShouldUpdateOnMount, isPureRender, canMeasure, canMountIncrementally));
+        new TestViewComponent(isPureRender, canMeasure, canMountIncrementally));
   }
 
   public static Builder create(ComponentContext context) {
-    return create(context, 0, 0, true, true, true, true);
+    return create(context, 0, 0, true, true, true);
   }
 
   public static Builder create(
       ComponentContext context,
-      boolean callsShouldUpdateOnMount,
       boolean isPureRender,
       boolean canMeasure,
       boolean canMountIncrementally) {
-    return create(
-        context,
-        0,
-        0,
-        callsShouldUpdateOnMount,
-        isPureRender,
-        canMeasure,
-        canMountIncrementally);
+    return create(context, 0, 0, isPureRender, canMeasure, canMountIncrementally);
   }
 
   private static Builder newBuilder(
@@ -168,45 +168,24 @@ public class TestViewComponent extends TestComponent {
       @AttrRes int defStyleAttr,
       @StyleRes int defStyleRes,
       TestViewComponent state) {
-    final Builder builder = new Builder();
-    builder.init(context, defStyleAttr, defStyleRes, state);
-    return builder;
+    return new Builder(context, defStyleAttr, defStyleRes, state);
   }
 
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (o == null) {
-      return false;
-    }
-    if (!super.equals(o)) {
-      return false;
-    }
-    if (o instanceof TestViewComponent) {
-      return true;
-    }
-    return false;
-  }
-
-  public static class Builder extends com.facebook.litho.Component.Builder<Builder> {
+  public static final class Builder extends com.facebook.litho.Component.Builder<Builder> {
     TestViewComponent mState;
 
-    private void init(
+    private Builder(
         ComponentContext context,
         @AttrRes int defStyleAttr,
         @StyleRes int defStyleRes,
         TestViewComponent state) {
-      super.init(context, defStyleAttr, defStyleRes, state);
+      super(context, defStyleAttr, defStyleRes, state);
       mState = state;
     }
 
-    public Builder unique() {
-      mState.mIsUnique = true;
-      return this;
+    @Override
+    protected void setComponent(Component component) {
+      mState = (TestViewComponent) component;
     }
 
     public Builder testView(View testView) {

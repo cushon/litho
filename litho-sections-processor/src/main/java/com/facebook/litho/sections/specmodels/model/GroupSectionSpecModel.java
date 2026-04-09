@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,13 +22,12 @@ import com.facebook.litho.specmodels.model.BuilderMethodModel;
 import com.facebook.litho.specmodels.model.CachedValueParamModel;
 import com.facebook.litho.specmodels.model.ClassNames;
 import com.facebook.litho.specmodels.model.DelegateMethod;
-import com.facebook.litho.specmodels.model.DependencyInjectionHelper;
 import com.facebook.litho.specmodels.model.EventDeclarationModel;
 import com.facebook.litho.specmodels.model.EventMethod;
 import com.facebook.litho.specmodels.model.FieldModel;
-import com.facebook.litho.specmodels.model.InjectPropModel;
 import com.facebook.litho.specmodels.model.InterStageInputParamModel;
 import com.facebook.litho.specmodels.model.MethodParamModel;
+import com.facebook.litho.specmodels.model.PrepareInterStageInputParamModel;
 import com.facebook.litho.specmodels.model.PropDefaultModel;
 import com.facebook.litho.specmodels.model.PropJavadocModel;
 import com.facebook.litho.specmodels.model.PropModel;
@@ -80,7 +79,6 @@ public class GroupSectionSpecModel implements SpecModel, HasService {
       ImmutableList<PropJavadocModel> propJavadocs,
       boolean isPublic,
       SpecElementType specElementType,
-      @Nullable DependencyInjectionHelper dependencyInjectionHelper,
       Object representedObject,
       SpecGenerator<GroupSectionSpecModel> groupSectionSpecGenerator,
       ImmutableList<FieldModel> fields) {
@@ -91,6 +89,7 @@ public class GroupSectionSpecModel implements SpecModel, HasService {
             .componentClass(SectionClassNames.SECTION)
             .delegateMethods(delegateMethods)
             .updateStateMethods(updateStateMethods)
+            .updateStateWithTransitionMethods(ImmutableList.of())
             .typeVariables(typeVariables)
             .eventMethods(eventMethods)
             .triggerMethods(triggerMethods)
@@ -102,7 +101,6 @@ public class GroupSectionSpecModel implements SpecModel, HasService {
             .classJavadoc(classJavadoc)
             .propJavadocs(propJavadocs)
             .isPublic(isPublic)
-            .dependencyInjectionHelper(dependencyInjectionHelper)
             .specElementType(specElementType)
             .representedObject(representedObject)
             .fields(fields)
@@ -184,16 +182,6 @@ public class GroupSectionSpecModel implements SpecModel, HasService {
   }
 
   @Override
-  public ImmutableList<InjectPropModel> getRawInjectProps() {
-    return mSpecModel.getRawInjectProps();
-  }
-
-  @Override
-  public ImmutableList<InjectPropModel> getInjectProps() {
-    return mSpecModel.getInjectProps();
-  }
-
-  @Override
   public ImmutableList<PropDefaultModel> getPropDefaults() {
     return mSpecModel.getPropDefaults();
   }
@@ -216,6 +204,11 @@ public class GroupSectionSpecModel implements SpecModel, HasService {
   @Override
   public ImmutableList<InterStageInputParamModel> getInterStageInputs() {
     return mSpecModel.getInterStageInputs();
+  }
+
+  @Override
+  public ImmutableList<PrepareInterStageInputParamModel> getPrepareInterStageInputs() {
+    return mSpecModel.getPrepareInterStageInputs();
   }
 
   @Override
@@ -299,11 +292,6 @@ public class GroupSectionSpecModel implements SpecModel, HasService {
   }
 
   @Override
-  public boolean hasInjectedDependencies() {
-    return mSpecModel.hasInjectedDependencies();
-  }
-
-  @Override
   public boolean shouldCheckIdInIsEquivalentToMethod() {
     return false;
   }
@@ -319,13 +307,18 @@ public class GroupSectionSpecModel implements SpecModel, HasService {
   }
 
   @Override
+  public boolean shouldGenerateTransferState() {
+    return true;
+  }
+
+  @Override
   public boolean shouldGenerateCopyMethod() {
     return true;
   }
 
   @Override
-  public DependencyInjectionHelper getDependencyInjectionHelper() {
-    return mSpecModel.getDependencyInjectionHelper();
+  public boolean isStateful() {
+    return mSpecModel.isStateful();
   }
 
   @Override

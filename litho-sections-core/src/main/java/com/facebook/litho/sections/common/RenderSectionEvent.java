@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,10 @@
 
 package com.facebook.litho.sections.common;
 
+import androidx.annotation.Nullable;
+import com.facebook.infer.annotation.Nullsafe;
 import com.facebook.litho.annotations.Event;
+import com.facebook.litho.annotations.EventHandlerRebindMode;
 import com.facebook.litho.sections.Children;
 
 /**
@@ -24,7 +27,8 @@ import com.facebook.litho.sections.Children;
  * com.facebook.litho.sections.annotations.GroupSectionSpec} to render the section of the {@link
  * com.facebook.litho.sections.fb.datasources.GraphQLRootQuerySectionSpec} result.
  */
-@Event(returnType = Children.class)
+@Nullsafe(Nullsafe.Mode.LOCAL)
+@Event(returnType = Children.class, mode = EventHandlerRebindMode.NONE)
 public class RenderSectionEvent {
 
   public enum FetchState {
@@ -79,10 +83,14 @@ public class RenderSectionEvent {
     TAIL_FETCH,
   }
 
+  // NULLSAFE_FIXME[Field Not Initialized]
   public Object model;
-  public Object lastNonNullModel;
+  public @Nullable Object lastNonNullModel;
+  // NULLSAFE_FIXME[Field Not Initialized]
   public FetchState state;
+  // NULLSAFE_FIXME[Field Not Initialized]
   public Throwable error;
+  // NULLSAFE_FIXME[Field Not Initialized]
   public DataSource dataSource;
-  public FetchType fetchType;
+  public @Nullable FetchType fetchType;
 }

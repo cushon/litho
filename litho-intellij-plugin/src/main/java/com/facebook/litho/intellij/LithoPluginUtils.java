@@ -1,11 +1,11 @@
 /*
- * Copyright 2004-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,27 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.facebook.litho.intellij;
 
+import com.facebook.infer.annotation.Nullsafe;
+import com.facebook.litho.annotations.Event;
 import com.facebook.litho.annotations.LayoutSpec;
-import com.facebook.litho.specmodels.processor.PsiAnnotationProxyUtils;
+import com.facebook.litho.annotations.MountSpec;
+import com.facebook.litho.annotations.Param;
+import com.facebook.litho.annotations.Prop;
+import com.facebook.litho.annotations.PropDefault;
+import com.facebook.litho.annotations.State;
 import com.google.common.annotations.VisibleForTesting;
+import com.intellij.ide.plugins.PluginManagerCore;
+import com.intellij.notification.NotificationGroup;
+import com.intellij.notification.NotificationType;
+import com.intellij.openapi.extensions.PluginId;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.JavaPsiFacade;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.psi.JavaResolveResult;
 import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiClassType;
 import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.PsiModifierListOwner;
 import com.intellij.psi.PsiParameter;
 import com.intellij.psi.PsiParameterList;
-import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.infos.MethodCandidateInfo;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.containers.ContainerUtil;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -43,13 +54,17 @@ import java.util.stream.Stream;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 
+@Nullsafe(Nullsafe.Mode.LOCAL)
 public class LithoPluginUtils {
+  private static final NotificationGroup NOTIFICATION_GROUP =
+      NotificationGroup.balloonGroup("Litho");
   private static final String SPEC_SUFFIX = "Spec";
+  private static final String KOTLIN_PLUGIN_ID = "org.jetbrains.kotlin";
 
-  public static boolean isComponentClass(PsiClass psiClass) {
+  public static boolean isComponentClass(@Nullable PsiClass psiClass) {
     return psiClass != null
         && psiClass.getSuperClass() != null
-        && ("ComponentLifecycle".equals(psiClass.getSuperClass().getName())
+        && ("SpecGeneratedComponent".equals(psiClass.getSuperClass().getName())
             || "com.facebook.litho.Component".equals(psiClass.getSuperClass().getQualifiedName()));
   }
 
@@ -57,8 +72,12 @@ public class LithoPluginUtils {
     return Optional.ofNullable(psiClass)
         .map(PsiClass::getSuperClass)
         .map(PsiClass::getQualifiedName)
-        .filter("com.facebook.litho.sections.Section"::equals)
+        .filter(LithoClassNames.SECTION_CLASS_NAME::equals)
         .isPresent();
+  }
+
+  public static boolean isGeneratedClass(@Nullable PsiClass psiClass) {
+    return LithoPluginUtils.isComponentClass(psiClass) || LithoPluginUtils.isSectionClass(psiClass);
   }
 
   public static boolean isLithoSpec(@Nullable PsiFile psiFile) {
@@ -70,14 +89,35 @@ public class LithoPluginUtils {
 
   public static boolean isLithoSpec(@Nullable PsiClass psiClass) {
     return psiClass != null
-        && (hasLithoSectionAnnotation(psiClass) || hasLithoAnnotation(psiClass));
+        && (hasLithoComponentSpecAnnotation(psiClass) || hasLithoSectionSpecAnnotation(psiClass));
   }
 
-  public static boolean hasLithoAnnotation(@Nullable PsiClass psiClass) {
-    if (psiClass == null) {
-      return false;
-    }
-    return hasAnnotation(psiClass, startsWith("com.facebook.litho.annotations"));
+  public static boolean isLayoutSpec(@Nullable PsiClass psiClass) {
+    return psiClass != null && hasAnnotation(psiClass, equals(LayoutSpec.class.getName()));
+  }
+
+  public static boolean isMountSpec(@Nullable PsiClass psiClass) {
+    return psiClass != null && hasAnnotation(psiClass, equals(MountSpec.class.getName()));
+  }
+
+  public static boolean hasLithoComponentSpecAnnotation(@Nullable PsiClass psiClass) {
+    return psiClass != null
+        && isSpecName(psiClass.getName())
+        && (isLayoutSpec(psiClass) || isMountSpec(psiClass));
+  }
+
+  public static boolean hasLithoSectionSpecAnnotation(@Nullable PsiClass psiClass) {
+    return psiClass != null
+        && isSpecName(psiClass.getName())
+        && hasAnnotation(psiClass, startsWith("com.facebook.litho.sections.annotations"));
+  }
+
+  /**
+   * @return true if given name ends with "Spec".
+   */
+  @Contract("null -> false")
+  public static boolean isSpecName(@Nullable String clsName) {
+    return clsName != null && clsName.endsWith(SPEC_SUFFIX);
   }
 
   @VisibleForTesting
@@ -103,37 +143,35 @@ public class LithoPluginUtils {
     return name -> name.equals(text);
   }
 
-  public static boolean hasLithoSectionAnnotation(PsiClass psiClass) {
-    return hasAnnotation(psiClass, startsWith("com.facebook.litho.sections.annotations"));
-  }
-
   public static boolean isPropOrState(PsiParameter parameter) {
     return isProp(parameter) || isState(parameter);
   }
 
   public static boolean isProp(PsiParameter parameter) {
-    return hasAnnotation(parameter, equals(LithoClassNames.PROP_CLASS_NAME));
+    return hasAnnotation(parameter, equals(Prop.class.getName()));
   }
 
   public static boolean isState(PsiParameter parameter) {
-    return hasAnnotation(parameter, equals(LithoClassNames.STATE_CLASS_NAME));
+    return hasAnnotation(parameter, equals(State.class.getName()));
   }
 
   public static boolean isParam(PsiParameter parameter) {
-    return hasAnnotation(parameter, equals(LithoClassNames.PARAM_ANNOTATION_NAME));
+    return hasAnnotation(parameter, equals(Param.class.getName()));
   }
 
   public static boolean isPropDefault(PsiField field) {
-    return hasAnnotation(field, equals(LithoClassNames.PROP_DEFAULT_CLASS_NAME));
+    return hasAnnotation(field, equals(PropDefault.class.getName()));
   }
 
   public static boolean isEvent(PsiClass psiClass) {
-    return hasAnnotation(psiClass, equals(LithoClassNames.EVENT_ANNOTATION_NAME));
+    return hasAnnotation(psiClass, equals(Event.class.getName()));
   }
 
   @Nullable
+  @Contract("null -> null")
   public static String getLithoComponentNameFromSpec(@Nullable String specName) {
-    if (specName != null && specName.endsWith(SPEC_SUFFIX)) {
+    if (isSpecName(specName)) {
+      // NULLSAFE_FIXME[Nullable Dereference]
       return specName.substring(0, specName.length() - SPEC_SUFFIX.length());
     }
     return null;
@@ -148,7 +186,9 @@ public class LithoPluginUtils {
     return null;
   }
 
-  /** @return the Stream of unique parameters from all methods excluding current method. */
+  /**
+   * @return the Stream of unique parameters from all methods excluding current method.
+   */
   public static Stream<PsiParameter> getPsiParameterStream(
       @Nullable PsiMethod currentMethod, PsiMethod[] allMethods) {
     return Stream.of(allMethods)
@@ -164,59 +204,74 @@ public class LithoPluginUtils {
     return t -> seen.add(key.apply(t));
   }
 
-  /**
-   * Finds file containing Component from the given Spec name.
-   *
-   * @param qualifiedSpecName Name of the Spec to search component for. For example
-   *     com.package.MySpec.java.
-   * @param project Project to find Component in.
-   */
-  public static Optional<PsiJavaFile> findComponentFile(String qualifiedSpecName, Project project) {
-    return Optional.of(qualifiedSpecName)
-        .map(LithoPluginUtils::getLithoComponentNameFromSpec)
-        .map(
-            qualifiedComponentName ->
-                JavaPsiFacade.getInstance(project)
-                    .findClass(qualifiedComponentName, GlobalSearchScope.allScope(project)))
-        .map(PsiElement::getContainingFile)
-        .filter(PsiJavaFile.class::isInstance)
-        .map(PsiJavaFile.class::cast);
-  }
-
-  /**
-   * Finds Component Class from the given Spec name.
-   *
-   * @param qualifiedSpecName Name of the Spec to search component for. For example
-   *     com.package.MySpec.java.
-   * @param project Project to find Component in.
-   */
-  public static Optional<PsiClass> findComponent(String qualifiedSpecName, Project project) {
-    return findComponentFile(qualifiedSpecName, project)
-        .flatMap(LithoPluginUtils::getFirstComponent);
-  }
-
   /** Finds LayoutSpec class in the given file. */
   public static Optional<PsiClass> getFirstLayoutSpec(PsiFile psiFile) {
-    return getFirstClass(
-        psiFile,
-        psiClass ->
-            PsiAnnotationProxyUtils.findAnnotationInHierarchy(psiClass, LayoutSpec.class) != null);
+    return getFirstClass(psiFile, LithoPluginUtils::isLayoutSpec);
   }
 
-  /** Finds Component class in the given file. */
-  public static Optional<PsiClass> getFirstComponent(PsiFile componentFile) {
-    return getFirstClass(componentFile, LithoPluginUtils::isComponentClass);
-  }
-
-  private static Optional<PsiClass> getFirstClass(
-      PsiFile psiFile, Predicate<PsiClass> classFilter) {
+  public static Optional<PsiClass> getFirstClass(PsiFile psiFile, Predicate<PsiClass> classFilter) {
     return Optional.of(psiFile)
-        .map(currentFile -> PsiTreeUtil.getChildrenOfType(currentFile, PsiClass.class))
+        .map(currentFile -> PsiTreeUtil.findChildrenOfType(currentFile, PsiClass.class))
         .flatMap(
             currentClasses ->
-                Arrays.stream(currentClasses)
-                    .filter(Objects::nonNull)
-                    .filter(classFilter)
-                    .findFirst());
+                currentClasses.stream().filter(Objects::nonNull).filter(classFilter).findFirst());
+  }
+
+  public static void showInfo(String infoMessage, @Nullable Project project) {
+    showNotification(infoMessage, NotificationType.INFORMATION, project);
+  }
+
+  public static void showWarning(String infoMessage, @Nullable Project project) {
+    showNotification(infoMessage, NotificationType.WARNING, project);
+  }
+
+  private static void showNotification(
+      String infoMessage, NotificationType type, @Nullable Project project) {
+    NOTIFICATION_GROUP.createNotification(infoMessage, type).notify(project);
+  }
+
+  /**
+   * Tries to guess if the given methodCall requires event handler.
+   *
+   * @return Qualified name of the handled Event or null, if methodCall neither accepts event
+   *     handler, nor require fix.
+   */
+  @Nullable
+  public static String resolveEventName(PsiMethodCallExpression methodCall) {
+    return Optional.of(methodCall.getMethodExpression().multiResolve(true))
+        .map(results -> results.length == 1 ? results[0] : JavaResolveResult.EMPTY)
+        .filter(MethodCandidateInfo.class::isInstance)
+        .map(MethodCandidateInfo.class::cast)
+        .filter(MethodCandidateInfo::isTypeArgumentsApplicable)
+        .filter(info -> !info.isApplicable() && !info.isValidResult())
+        .map(info -> info.getElement().getParameterList().getParameters())
+        .filter(parameters -> parameters.length > 0) // method(EventHandler<T> e)
+        .map(parameters -> parameters[0].getType())
+        .filter(PsiClassType.class::isInstance)
+        .filter(
+            parameterType -> {
+              String fullName = parameterType.getCanonicalText();
+              int genericIndex = fullName.indexOf('<');
+              if (genericIndex <= 0) {
+                return false;
+              }
+              String className = fullName.substring(0, genericIndex);
+              return LithoClassNames.EVENT_HANDLER_CLASS_NAME.equals(className);
+            })
+        .map(parameterType -> ((PsiClassType) parameterType).getParameters())
+        .filter(generics -> generics.length == 1) // <T>
+        .map(generics -> generics[0].getCanonicalText())
+        .orElse(null);
+  }
+
+  public static VirtualFile getVirtualFile(PsiFile file) {
+    final VirtualFile vf = file.getVirtualFile();
+    if (vf != null) return vf;
+
+    return file.getViewProvider().getVirtualFile();
+  }
+
+  public static boolean isKotlinPluginAvailable() {
+    return PluginManagerCore.getPlugin(PluginId.findId(KOTLIN_PLUGIN_ID)) != null;
   }
 }

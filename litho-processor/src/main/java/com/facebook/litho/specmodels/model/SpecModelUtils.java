@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,12 +16,13 @@
 
 package com.facebook.litho.specmodels.model;
 
-import static com.facebook.litho.specmodels.internal.ImmutableList.copyOf;
 import static com.facebook.litho.specmodels.model.ClassNames.OUTPUT;
 
 import com.facebook.litho.annotations.Prop;
 import com.facebook.litho.annotations.State;
+import com.facebook.litho.specmodels.internal.ImmutableList;
 import com.facebook.litho.specmodels.internal.SimpleMemoizingSupplier;
+import com.google.common.base.Preconditions;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
@@ -38,13 +39,13 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.SimpleTypeVisitor6;
 
-/**
- * Utility methods for {@link SpecModel}s.
- */
+/** Utility methods for {@link SpecModel}s. */
 public class SpecModelUtils {
 
   public static String getSpecAccessor(SpecModel specModel) {
-    if (specModel.getSpecElementType() == SpecElementType.KOTLIN_SINGLETON) {
+    if (specModel.getSpecElementType() == SpecElementType.KOTLIN_CLASS) {
+      return specModel.getSpecName() + ".Companion";
+    } else if (specModel.getSpecElementType() == SpecElementType.KOTLIN_SINGLETON) {
       return specModel.getSpecName() + ".INSTANCE";
     }
 
@@ -75,9 +76,9 @@ public class SpecModelUtils {
 
   @Nullable
   public static SpecMethodModel<DelegateMethod, Void> getMethodModelWithAnnotation(
-      SpecModel specModel,
-      Class<? extends Annotation> annotationClass) {
-    for (SpecMethodModel<DelegateMethod, Void> delegateMethodModel : specModel.getDelegateMethods()) {
+      SpecModel specModel, Class<? extends Annotation> annotationClass) {
+    for (SpecMethodModel<DelegateMethod, Void> delegateMethodModel :
+        specModel.getDelegateMethods()) {
       for (Annotation annotation : delegateMethodModel.annotations) {
         if (annotation.annotationType().equals(annotationClass)) {
           return delegateMethodModel;
@@ -89,10 +90,10 @@ public class SpecModelUtils {
   }
 
   public static List<SpecMethodModel<DelegateMethod, Void>> getMethodModelsWithAnnotation(
-      SpecModel specModel,
-      Class<? extends Annotation> annotationClass) {
+      SpecModel specModel, Class<? extends Annotation> annotationClass) {
     final List<SpecMethodModel<DelegateMethod, Void>> methodModels = new ArrayList<>();
-    for (SpecMethodModel<DelegateMethod, Void> delegateMethodModel : specModel.getDelegateMethods()) {
+    for (SpecMethodModel<DelegateMethod, Void> delegateMethodModel :
+        specModel.getDelegateMethods()) {
       for (Annotation annotation : delegateMethodModel.annotations) {
         if (annotation.annotationType().equals(annotationClass)) {
           methodModels.add(delegateMethodModel);
@@ -105,38 +106,118 @@ public class SpecModelUtils {
 
   public static boolean isPropOutput(SpecModel specModel, MethodParamModel methodParamModel) {
     final PropModel prop = getPropWithName(specModel, methodParamModel.getName());
-    return prop != null &&
-        methodParamModel.getTypeName() instanceof ParameterizedTypeName &&
-        ((ParameterizedTypeName) methodParamModel.getTypeName()).rawType.equals(OUTPUT) &&
-        ((ParameterizedTypeName) methodParamModel.getTypeName()).typeArguments.size() == 1 &&
-        ((ParameterizedTypeName) methodParamModel.getTypeName()).typeArguments.get(0)
+    return prop != null
+        && methodParamModel.getTypeName() instanceof ParameterizedTypeName
+        && ((ParameterizedTypeName) methodParamModel.getTypeName()).rawType.equals(OUTPUT)
+        && ((ParameterizedTypeName) methodParamModel.getTypeName()).typeArguments.size() == 1
+        && ((ParameterizedTypeName) methodParamModel.getTypeName())
+            .typeArguments
+            .get(0)
             .equals(prop.getTypeName().box());
   }
 
   public static boolean isStateOutput(SpecModel specModel, MethodParamModel methodParamModel) {
     final StateParamModel stateValue =
         SpecModelUtils.getStateValueWithName(specModel, methodParamModel.getName());
-    return stateValue != null &&
-        methodParamModel.getTypeName() instanceof ParameterizedTypeName &&
-        ((ParameterizedTypeName) methodParamModel.getTypeName()).rawType.equals(OUTPUT) &&
-        ((ParameterizedTypeName) methodParamModel.getTypeName()).typeArguments.size() == 1 &&
-        ((ParameterizedTypeName) methodParamModel.getTypeName()).typeArguments.get(0)
+    return stateValue != null
+        && methodParamModel.getTypeName() instanceof ParameterizedTypeName
+        && ((ParameterizedTypeName) methodParamModel.getTypeName()).rawType.equals(OUTPUT)
+        && ((ParameterizedTypeName) methodParamModel.getTypeName()).typeArguments.size() == 1
+        && ((ParameterizedTypeName) methodParamModel.getTypeName())
+            .typeArguments
+            .get(0)
             .equals(stateValue.getTypeName().box());
   }
 
+  /** Determines whether the given method parameter is a state value. */
   public static boolean isStateValue(SpecModel specModel, MethodParamModel methodParamModel) {
     final StateParamModel stateValue =
         SpecModelUtils.getStateValueWithName(specModel, methodParamModel.getName());
-    return stateValue != null &&
-        methodParamModel.getTypeName() instanceof ParameterizedTypeName &&
-        ((ParameterizedTypeName) methodParamModel.getTypeName()).rawType
-            .equals(ClassNames.STATE_VALUE) &&
-        ((ParameterizedTypeName) methodParamModel.getTypeName()).typeArguments.size() == 1 &&
-        ((ParameterizedTypeName) methodParamModel.getTypeName()).typeArguments.get(0)
-            .equals(stateValue.getTypeName().box());
+    return isStateValueHolder(specModel, methodParamModel)
+        && doesStateValueTypeMatchState(
+            stateValue,
+            ((ParameterizedTypeName) methodParamModel.getTypeName()).typeArguments.get(0));
   }
 
-  /** @return the model for state/prop that this Diff is refering to. */
+  /**
+   * Determines whether the given method parameter is a state value, when ignoring Kotlin variant
+   * types.
+   *
+   * <p>The expectation is that this function will return true for cases that fail {@link
+   * #isStateValue}, only due to covariance. Therefore, failing {@link #isStateValue} is an
+   * invariant of this function.
+   *
+   * @return true if the given method parameter is a state value, when ignoring Kotlin covariance.
+   */
+  public static boolean isStateValueOnlyIfIgnoringKotlinCovariance(
+      final SpecModel specModel, final MethodParamModel methodParamModel) {
+    if (!isStateValueHolder(specModel, methodParamModel)) {
+      return false;
+    }
+
+    final StateParamModel stateValue =
+        Preconditions.checkNotNull(
+            SpecModelUtils.getStateValueWithName(specModel, methodParamModel.getName()));
+    final TypeName methodParamStateTypeName =
+        ((ParameterizedTypeName) methodParamModel.getTypeName()).typeArguments.get(0);
+
+    return !doesStateValueTypeMatchState(stateValue, methodParamStateTypeName)
+        && areTypesEqualIgnoringKotlinCovariance(
+            specModel, stateValue.getTypeName(), methodParamStateTypeName);
+  }
+
+  /**
+   * Determines if the given MethodParamModel is a state value holder (ie. of the type
+   * StateValue<T>).
+   *
+   * @param specModel the specific specModel from where the types are coming from
+   * @param methodParamModel the method param model to check
+   * @return true if the methodParamModel is a state value holder, otherwise false
+   */
+  static boolean isStateValueHolder(SpecModel specModel, MethodParamModel methodParamModel) {
+    final StateParamModel stateValue =
+        SpecModelUtils.getStateValueWithName(specModel, methodParamModel.getName());
+    return stateValue != null
+        && methodParamModel.getTypeName() instanceof ParameterizedTypeName
+        && ((ParameterizedTypeName) methodParamModel.getTypeName())
+            .rawType.equals(ClassNames.STATE_VALUE)
+        && ((ParameterizedTypeName) methodParamModel.getTypeName()).typeArguments.size() == 1;
+  }
+
+  /**
+   * @param stateValue the state value to check against
+   * @param underlyingStateTypeName the underlying typename of the state value. (ie. T in
+   *     StateValue<T>)</T>
+   * @return true if the state value matches the underlying type, otherwise false.
+   */
+  static boolean doesStateValueTypeMatchState(
+      @Nullable final StateParamModel stateValue, final TypeName underlyingStateTypeName) {
+    return stateValue != null && underlyingStateTypeName.equals(stateValue.getTypeName().box());
+  }
+
+  /**
+   * Checks equality against two types, ignoring Kotlin covariance ie. List<? extends T> would equal
+   * List<T>.
+   *
+   * @param specModel the specific specModel from where the types are coming from
+   * @param typeName1 the first type to compare
+   * @param typeName2 the second type to compare
+   * @return if the specModel is a Kotlin spec, and the two types are equal after ignoring Kotlin
+   *     covariance.
+   */
+  public static boolean areTypesEqualIgnoringKotlinCovariance(
+      SpecModel specModel, TypeName typeName1, TypeName typeName2) {
+    final TypeName typeName1WithoutWildcards =
+        KotlinSpecHelper.maybeRemoveWildcardFromContainerIfKotlinSpec(specModel, typeName1);
+    final TypeName typeName2WithoutWildcards =
+        KotlinSpecHelper.maybeRemoveWildcardFromContainerIfKotlinSpec(specModel, typeName2);
+
+    return typeName1WithoutWildcards.box().equals(typeName2WithoutWildcards.box());
+  }
+
+  /**
+   * @return the model for state/prop that this Diff is refering to.
+   */
   public static MethodParamModel getReferencedParamModelForDiff(
       SpecModel specModel, RenderDataDiffModel diffModel) {
     if (MethodParamModelUtils.isAnnotatedWith(diffModel, Prop.class)) {
@@ -149,9 +230,17 @@ public class SpecModelUtils {
         "Diff model wasn't annotated with @State or @Prop, some validation failed");
   }
 
-  public static boolean hasAnnotation(
-      MethodParamModel methodParam,
-      Class<?> annotationClass) {
+  public static boolean hasAnnotation(SpecMethodModel<?, ?> method, Class<?> annotationClass) {
+    for (Annotation annotation : method.annotations) {
+      if (annotation.annotationType().equals(annotationClass)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  public static boolean hasAnnotation(MethodParamModel methodParam, Class<?> annotationClass) {
     for (Annotation annotation : methodParam.getAnnotations()) {
       if (annotation.annotationType().equals(annotationClass)) {
         return true;
@@ -195,34 +284,36 @@ public class SpecModelUtils {
                           : generateTypeSpec(mirror);
                     });
 
-            final List<? extends TypeMirror> mirrors = typeElement.getInterfaces();
-            final List<TypeSpec> superinterfaces =
-                mirrors != null && !mirrors.isEmpty()
-                    ? mirrors
-                        .stream()
-                        .filter(mirror -> mirror.getKind() == TypeKind.DECLARED)
-                        .map(SpecModelUtils::generateTypeSpec)
-                        .collect(Collectors.toList())
-                    : Collections.emptyList();
+            final Supplier<ImmutableList<TypeSpec>> superinterfaces =
+                new SimpleMemoizingSupplier<>(
+                    () -> {
+                      final List<? extends TypeMirror> mirrors = typeElement.getInterfaces();
+                      return ImmutableList.copyOf(
+                          mirrors != null && !mirrors.isEmpty()
+                              ? mirrors.stream()
+                                  .filter(mirror -> mirror.getKind() == TypeKind.DECLARED)
+                                  .map(SpecModelUtils::generateTypeSpec)
+                                  .collect(Collectors.toList())
+                              : Collections.emptyList());
+                    });
 
-            final List<TypeSpec> typeArguments =
-                ClassName.bestGuess(qualifiedName).equals(ClassNames.DIFF)
-                        || superinterfaces
-                            .stream()
-                            .anyMatch(typeSpec -> typeSpec.isSubInterface(ClassNames.COLLECTION))
-                    ? ((DeclaredType) type)
-                        .getTypeArguments()
-                        .stream()
-                        .map(SpecModelUtils::generateTypeSpec)
-                        .collect(Collectors.toList())
-                    : Collections.emptyList();
+            final Supplier<ImmutableList<TypeSpec>> typeArguments =
+                new SimpleMemoizingSupplier<>(
+                    () ->
+                        ImmutableList.copyOf(
+                            ClassName.bestGuess(qualifiedName).equals(ClassNames.DIFF)
+                                    || superinterfaces.get().stream()
+                                        .anyMatch(
+                                            typeSpec ->
+                                                typeSpec.isSubInterface(ClassNames.COLLECTION))
+                                ? ((DeclaredType) type)
+                                    .getTypeArguments().stream()
+                                        .map(SpecModelUtils::generateTypeSpec)
+                                        .collect(Collectors.toList())
+                                : Collections.emptyList()));
 
             return new TypeSpec.DeclaredTypeSpec(
-                safelyGetTypeName(t),
-                qualifiedName,
-                superclass,
-                copyOf(superinterfaces),
-                copyOf(typeArguments));
+                safelyGetTypeName(t), qualifiedName, superclass, superinterfaces, typeArguments);
           }
         },
         null);
@@ -247,7 +338,7 @@ public class SpecModelUtils {
       SpecModel specModel, PropModel prop) {
     for (SpecMethodModel<BindDynamicValueMethod, Void> method :
         ((MountSpecModel) specModel).getBindDynamicValueMethods()) {
-      if (prop.equals(method.methodParams.get(1))) {
+      if (prop.getName().equals(method.methodParams.get(1).getName())) {
         return method;
       }
     }

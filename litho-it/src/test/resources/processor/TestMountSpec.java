@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,20 +18,17 @@ package com.facebook.litho.processor.integration.resources;
 
 import static com.facebook.litho.annotations.ResType.STRING;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
+import android.os.Bundle;
 import android.view.View;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import com.facebook.litho.ClickEvent;
 import com.facebook.litho.ComponentContext;
 import com.facebook.litho.ComponentLayout;
-import com.facebook.litho.DefaultMountContentPool;
 import com.facebook.litho.Diff;
-import com.facebook.litho.MountContentPool;
 import com.facebook.litho.Output;
 import com.facebook.litho.Size;
 import com.facebook.litho.StateValue;
@@ -55,27 +52,28 @@ import com.facebook.litho.annotations.OnEvent;
 import com.facebook.litho.annotations.OnLoadStyle;
 import com.facebook.litho.annotations.OnMeasure;
 import com.facebook.litho.annotations.OnMount;
+import com.facebook.litho.annotations.OnPerformActionForVirtualView;
 import com.facebook.litho.annotations.OnPopulateAccessibilityNode;
 import com.facebook.litho.annotations.OnPopulateExtraAccessibilityNode;
 import com.facebook.litho.annotations.OnTrigger;
 import com.facebook.litho.annotations.OnUnmount;
 import com.facebook.litho.annotations.OnUpdateState;
+import com.facebook.litho.annotations.OnVirtualViewKeyboardFocusChanged;
 import com.facebook.litho.annotations.Param;
 import com.facebook.litho.annotations.Prop;
 import com.facebook.litho.annotations.PropDefault;
+import com.facebook.litho.annotations.ShouldExcludeFromIncrementalMount;
 import com.facebook.litho.annotations.ShouldUpdate;
 import com.facebook.litho.annotations.State;
 import com.facebook.litho.annotations.TreeProp;
+import com.facebook.rendercore.MountContentPools;
 import javax.annotation.Nullable;
 
-@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
 @MountSpec(
-  events = TestEvent.class,
-  shouldUseDisplayList = true,
-  isPureRender = true,
-  hasChildLithoViews = true,
-  canPreallocate = true
-)
+    events = TestEvent.class,
+    isPureRender = true,
+    hasChildLithoViews = true,
+    canPreallocate = true)
 public class TestMountSpec<S extends View> implements TestTag {
   @PropDefault protected static final boolean prop2 = true;
 
@@ -129,12 +127,35 @@ public class TestMountSpec<S extends View> implements TestTag {
 
   @OnPopulateAccessibilityNode
   static void onPopulateAccessibilityNode(
+      ComponentContext c,
       View host,
       AccessibilityNodeInfoCompat node,
       @Prop(resType = STRING) @Nullable CharSequence prop7) {}
 
+  @OnPerformActionForVirtualView
+  static boolean onPerformActionForVirtualView(
+      ComponentContext c,
+      View host,
+      AccessibilityNodeInfoCompat node,
+      int virtualViewId,
+      int action,
+      @Nullable Bundle arguments,
+      @Prop(resType = STRING) @Nullable CharSequence prop7) {
+    return true;
+  }
+
+  @OnVirtualViewKeyboardFocusChanged
+  static void onVirtualViewKeyboardFocusChanged(
+      ComponentContext c,
+      View host,
+      @Nullable AccessibilityNodeInfoCompat node,
+      int virtualViewId,
+      boolean hasFocus,
+      @Prop(resType = STRING) @Nullable CharSequence prop7) {}
+
   @GetExtraAccessibilityNodesCount
   static int getExtraAccessibilityNodesCount(
+      ComponentContext c,
       @Prop int prop1,
       @Prop(resType = STRING) @Nullable CharSequence prop7,
       @FromBoundsDefined Integer boundsDefinedOutput) {
@@ -143,17 +164,19 @@ public class TestMountSpec<S extends View> implements TestTag {
 
   @OnPopulateExtraAccessibilityNode
   static void onPopulateExtraAccessibilityNode(
+      ComponentContext c,
       AccessibilityNodeInfoCompat node,
       int extraNodeIndex,
       int componentBoundsLeft,
       int componentBoundsTop,
       @Prop Object prop3,
       @Prop(resType = STRING) @Nullable CharSequence prop7,
-      @CachedValue int cached,
+      // @CachedValue int cached, // It seems the A11Y APIs does not accept ComponentContext
       @FromBoundsDefined Integer boundsDefinedOutput) {}
 
   @GetExtraAccessibilityNodeAt
   static int getExtraAccessibilityNodeAt(
+      ComponentContext c,
       int x,
       int y,
       @Prop Object prop3,
@@ -190,13 +213,18 @@ public class TestMountSpec<S extends View> implements TestTag {
   }
 
   @OnCreateMountContentPool
-  static MountContentPool onCreateMountContentPool() {
-    return new DefaultMountContentPool("MyCustomPool", 3, true);
+  static MountContentPools.ContentPool onCreateMountContentPool(int size) {
+    return new MountContentPools.DefaultContentPool(TestMountSpec.class, size);
   }
 
   @OnCalculateCachedValue(name = "cached")
   static int onCalculateCached(
       @Prop Object prop3, @Prop char prop5, @State(canUpdateLazily = true) long state1) {
     return 0;
+  }
+
+  @ShouldExcludeFromIncrementalMount
+  static boolean enablePrefetch(@Prop(optional = true) boolean prop2) {
+    return prop2;
   }
 }

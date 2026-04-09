@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,9 +30,8 @@ import javax.annotation.Nullable;
 /**
  * Model that is an abstract representation of a {@link com.facebook.litho.annotations.LayoutSpec}.
  */
-public class LayoutSpecModel implements SpecModel, HasPureRender {
+public class LayoutSpecModel implements SpecModel {
   private final SpecModelImpl mSpecModel;
-  private final boolean mIsPureRender;
   private final String mSimpleNameDelegate;
   private final SpecGenerator<LayoutSpecModel> mLayoutSpecGenerator;
 
@@ -54,8 +53,6 @@ public class LayoutSpecModel implements SpecModel, HasPureRender {
       String classJavadoc,
       ImmutableList<PropJavadocModel> propJavadocs,
       boolean isPublic,
-      DependencyInjectionHelper dependencyInjectionHelper,
-      boolean isPureRender,
       SpecElementType specElementType,
       Object representedObject,
       SpecGenerator<LayoutSpecModel> layoutSpecGenerator,
@@ -83,12 +80,10 @@ public class LayoutSpecModel implements SpecModel, HasPureRender {
             .classJavadoc(classJavadoc)
             .propJavadocs(propJavadocs)
             .isPublic(isPublic)
-            .dependencyInjectionHelper(dependencyInjectionHelper)
             .specElementType(specElementType)
             .representedObject(representedObject)
             .fields(fields)
             .build();
-    mIsPureRender = isPureRender;
     mLayoutSpecGenerator = layoutSpecGenerator;
     mSimpleNameDelegate = simpleNameDelegate;
   }
@@ -166,16 +161,6 @@ public class LayoutSpecModel implements SpecModel, HasPureRender {
   }
 
   @Override
-  public ImmutableList<InjectPropModel> getRawInjectProps() {
-    return mSpecModel.getRawInjectProps();
-  }
-
-  @Override
-  public ImmutableList<InjectPropModel> getInjectProps() {
-    return mSpecModel.getInjectProps();
-  }
-
-  @Override
   public ImmutableList<PropDefaultModel> getPropDefaults() {
     return mSpecModel.getPropDefaults();
   }
@@ -198,6 +183,11 @@ public class LayoutSpecModel implements SpecModel, HasPureRender {
   @Override
   public ImmutableList<InterStageInputParamModel> getInterStageInputs() {
     return mSpecModel.getInterStageInputs();
+  }
+
+  @Override
+  public ImmutableList<PrepareInterStageInputParamModel> getPrepareInterStageInputs() {
+    return mSpecModel.getPrepareInterStageInputs();
   }
 
   @Override
@@ -281,11 +271,6 @@ public class LayoutSpecModel implements SpecModel, HasPureRender {
   }
 
   @Override
-  public boolean hasInjectedDependencies() {
-    return mSpecModel.hasInjectedDependencies();
-  }
-
-  @Override
   public boolean shouldCheckIdInIsEquivalentToMethod() {
     return true;
   }
@@ -301,13 +286,18 @@ public class LayoutSpecModel implements SpecModel, HasPureRender {
   }
 
   @Override
-  public boolean shouldGenerateCopyMethod() {
-    return true;
+  public boolean shouldGenerateTransferState() {
+    return false;
   }
 
   @Override
-  public DependencyInjectionHelper getDependencyInjectionHelper() {
-    return mSpecModel.getDependencyInjectionHelper();
+  public boolean isStateful() {
+    return false;
+  }
+
+  @Override
+  public boolean shouldGenerateCopyMethod() {
+    return true;
   }
 
   @Override
@@ -331,13 +321,18 @@ public class LayoutSpecModel implements SpecModel, HasPureRender {
   }
 
   @Override
-  public boolean isPureRender() {
-    return mIsPureRender;
+  public boolean shouldGenerateIsEquivalentTo() {
+    return false;
   }
 
   @Override
-  public boolean shouldGenerateIsEquivalentTo() {
-    return false;
+  public boolean hasBuildTimeValidations() {
+    return true;
+  }
+
+  @Override
+  public boolean shouldGenerateGetProps() {
+    return true;
   }
 
   public String getSimpleNameDelegate() {
@@ -349,10 +344,13 @@ public class LayoutSpecModel implements SpecModel, HasPureRender {
     return "LayoutSpecModel{"
         + "mSpecModel="
         + mSpecModel
-        + ", mIsPureRender="
-        + mIsPureRender
         + ", mLayoutSpecGenerator="
         + mLayoutSpecGenerator
         + '}';
+  }
+
+  @Override
+  public boolean shouldGenerateEventHandlerLambdaFactories() {
+    return true;
   }
 }

@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.facebook.litho;
 
+import com.facebook.infer.annotation.Nullsafe;
 import javax.annotation.Nullable;
 import org.hamcrest.Matcher;
 import org.hamcrest.core.Is;
@@ -23,6 +25,7 @@ import org.hamcrest.core.Is;
  * Base class used to share common properties used in TestSpec builders. Mirrors relevant properties
  * from {@link com.facebook.litho.Component.Builder}.
  */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 public abstract class BaseMatcher<T extends BaseMatcher<T>> {
   @Nullable Matcher<EventHandler<ClickEvent>> mClickHandlerMatcher;
   @Nullable Matcher<EventHandler<LongClickEvent>> mLongClickHandlerMatcher;

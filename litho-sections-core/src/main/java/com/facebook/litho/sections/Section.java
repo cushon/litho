@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,20 +16,22 @@
 
 package com.facebook.litho.sections;
 
+import android.util.Pair;
 import androidx.annotation.VisibleForTesting;
-import androidx.core.util.Pair;
-import com.facebook.litho.Equivalence;
+import com.facebook.litho.ComponentContext;
 import com.facebook.litho.EventDispatcher;
 import com.facebook.litho.EventHandler;
 import com.facebook.litho.EventTriggersContainer;
+import com.facebook.litho.Handle;
 import com.facebook.litho.HasEventDispatcher;
 import com.facebook.litho.HasEventTrigger;
-import com.facebook.litho.ResourceResolver;
 import com.facebook.litho.StateContainer;
 import com.facebook.litho.sections.annotations.DiffSectionSpec;
 import com.facebook.litho.sections.annotations.GroupSectionSpec;
 import com.facebook.litho.sections.annotations.OnDiff;
 import com.facebook.litho.sections.config.SectionsConfiguration;
+import com.facebook.rendercore.Equivalence;
+import com.facebook.rendercore.ResourceResolver;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -51,7 +53,7 @@ public abstract class Section extends SectionLifecycle
   private Section mParent;
   private boolean mInvalidated;
   private SectionContext mScopedContext;
-  EventHandler<LoadingEvent> loadingEventHandler;
+  @Nullable EventHandler<LoadingEvent> loadingEventHandler;
 
   /**
    * Holds onto how many direct section children of each type this Section has. Used for
@@ -62,9 +64,12 @@ public abstract class Section extends SectionLifecycle
   /** Simple name to identify the generated section. */
   private final String mSimpleName;
 
+  private StateContainer mStateContainer;
+
   protected Section(String simpleName) {
     mSimpleName = simpleName;
     mKey = getLogTag();
+    mStateContainer = createStateContainer();
   }
 
   @Override
@@ -73,8 +78,12 @@ public abstract class Section extends SectionLifecycle
   }
 
   @Override
-  public void recordEventTrigger(EventTriggersContainer container) {
+  public void recordEventTrigger(ComponentContext c, EventTriggersContainer container) {
     // Do nothing by default
+  }
+
+  public boolean getShouldCompareCommonProps() {
+    return mShouldCompareCommonProps;
   }
 
   /**
@@ -87,12 +96,17 @@ public abstract class Section extends SectionLifecycle
    */
   public abstract static class Builder<T extends Builder<T>> {
 
-    private Section mSection;
-    protected ResourceResolver mResourceResolver;
+    private final Section mSection;
+    protected final ResourceResolver mResourceResolver;
 
-    protected void init(SectionContext context, Section section) {
+    protected Builder(SectionContext context, Section section) {
       mSection = section;
-      mResourceResolver = new ResourceResolver(context);
+      mResourceResolver = context.getResourceResolver();
+    }
+
+    public T handle(Handle handle) {
+      mSection.setHandle(handle);
+      return getThis();
     }
 
     /** Sets the key of this {@link Section} local to its parent. */
@@ -101,20 +115,22 @@ public abstract class Section extends SectionLifecycle
       return getThis();
     }
 
-    protected T loadingEventHandler(EventHandler<LoadingEvent> loadingEventHandler) {
+    protected T loadingEventHandler(@Nullable EventHandler<LoadingEvent> loadingEventHandler) {
       mSection.loadingEventHandler = loadingEventHandler;
+      return getThis();
+    }
+
+    public T shouldCompareCommonProps(boolean shouldCompareCommonProps) {
+      mSection.mShouldCompareCommonProps = shouldCompareCommonProps;
       return getThis();
     }
 
     public abstract T getThis();
 
-    /** @return The immutable {@link Section}. */
+    /**
+     * @return The immutable {@link Section}.
+     */
     public abstract Section build();
-
-    protected void release() {
-      mSection = null;
-      mResourceResolver = null;
-    }
 
     /**
      * Checks that all the required props are supplied, and if not throws a useful exception
@@ -147,8 +163,12 @@ public abstract class Section extends SectionLifecycle
   private List<Section> mChildren;
   private String mGlobalKey;
   private String mKey;
+  @Nullable private Handle mHandle;
+  private boolean mShouldCompareCommonProps;
 
-  /** @return a unique key for this {@link Section} within its tree. */
+  /**
+   * @return a unique key for this {@link Section} within its tree.
+   */
   @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
   public String getGlobalKey() {
     return mGlobalKey;
@@ -158,6 +178,23 @@ public abstract class Section extends SectionLifecycle
   @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
   public void setGlobalKey(String key) {
     mGlobalKey = key;
+  }
+
+  /**
+   * @return get the {@link Handle} associated with this section.
+   */
+  @Nullable
+  Handle getHandle() {
+    return mHandle;
+  }
+
+  /**
+   * Associate a {@link Handle} with this section
+   *
+   * @param handle handle
+   */
+  void setHandle(Handle handle) {
+    mHandle = handle;
   }
 
   /**
@@ -196,13 +233,19 @@ public abstract class Section extends SectionLifecycle
     mCount = count;
   }
 
-  /** @return the direct children of this {@link Section}. */
+  /**
+   * @return the direct children of this {@link Section}.
+   */
+  @Nullable
   @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
   public List<Section> getChildren() {
     return mChildren;
   }
 
-  /** @return the parent of this {@link Section} in the tree. */
+  /**
+   * @return the parent of this {@link Section} in the tree.
+   */
+  @Nullable
   public Section getParent() {
     return mParent;
   }
@@ -228,7 +271,9 @@ public abstract class Section extends SectionLifecycle
     }
   }
 
-  /** @return true if this Section or any of its children were invalidated. */
+  /**
+   * @return true if this Section or any of its children were invalidated.
+   */
   boolean isInvalidated() {
     return mInvalidated;
   }
@@ -312,6 +357,10 @@ public abstract class Section extends SectionLifecycle
     return mSimpleName;
   }
 
+  protected boolean isEquivalentProps(Section other, boolean shouldCompareCommonProps) {
+    return this.equals(other);
+  }
+
   /**
    * Compares this section to a different one to check if they are the same
    *
@@ -324,17 +373,25 @@ public abstract class Section extends SectionLifecycle
    */
   @Override
   public boolean isEquivalentTo(Section other) {
-    return this.equals(other);
+    return isEquivalentProps(other, mShouldCompareCommonProps);
+  }
+
+  @Nullable
+  protected static StateContainer getStateContainer(ComponentContext c, Section section) {
+    return section.mStateContainer;
   }
 
   @Nullable
   protected StateContainer getStateContainer() {
-    return null;
+    return Section.getStateContainer(mScopedContext, this);
   }
 
-  /** Called when this {@link Section} is not in use anymore to release its resources. */
-  void release() {
-    // TODO release list into a pool t11953296
+  protected void setStateContainer(StateContainer stateContainer) {
+    mStateContainer = stateContainer;
+  }
+
+  protected @Nullable StateContainer createStateContainer() {
+    return null;
   }
 
   void generateKeyAndSet(SectionContext c, String globalKey) {
@@ -376,7 +433,6 @@ public abstract class Section extends SectionLifecycle
 
   static Map<String, Pair<Section, Integer>> acquireChildrenMap(
       @Nullable Section currentComponent) {
-    // TODO use pools instead t11953296
     final HashMap<String, Pair<Section, Integer>> childrenMap = new HashMap<>();
     if (currentComponent == null) {
       return childrenMap;
@@ -396,8 +452,9 @@ public abstract class Section extends SectionLifecycle
     return childrenMap;
   }
 
-  static void releaseChildrenMap(Map<String, Pair<Section, Integer>> newChildren) {
-    // TODO use pools t11953296
+  @Override
+  public String toString() {
+    return getSimpleName();
   }
 
   @VisibleForTesting

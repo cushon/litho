@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,6 @@ package com.facebook.litho.specmodels.model;
 import static com.facebook.litho.specmodels.model.ClassNames.DIFF;
 
 import com.facebook.litho.annotations.CachedValue;
-import com.facebook.litho.annotations.InjectProp;
 import com.facebook.litho.annotations.Prop;
 import com.facebook.litho.annotations.State;
 import com.facebook.litho.annotations.TreeProp;
@@ -28,9 +27,7 @@ import com.squareup.javapoet.AnnotationSpec;
 import java.lang.annotation.Annotation;
 import java.util.List;
 
-/**
- * Factory for creating {@link MethodParamModel}s.
- */
+/** Factory for creating {@link MethodParamModel}s. */
 public final class MethodParamModelFactory {
 
   public static MethodParamModel create(
@@ -39,6 +36,7 @@ public final class MethodParamModelFactory {
       List<Annotation> annotations,
       List<AnnotationSpec> externalAnnotations,
       List<Class<? extends Annotation>> permittedInterStateInputAnnotations,
+      List<Class<? extends Annotation>> permittedLayoutInterStateInputAnnotations,
       boolean canCreateDiffModels,
       Object representedObject) {
 
@@ -75,10 +73,6 @@ public final class MethodParamModelFactory {
         }
       }
 
-      if (annotation instanceof InjectProp) {
-        return new InjectPropModel(simpleMethodParamModel, ((InjectProp) annotation).isLazy());
-      }
-
       if (annotation instanceof State) {
         StateParamModel stateParamModel =
             new StateParamModel(simpleMethodParamModel, ((State) annotation).canUpdateLazily());
@@ -96,6 +90,10 @@ public final class MethodParamModelFactory {
 
       if (permittedInterStateInputAnnotations.contains(annotation.annotationType())) {
         return new InterStageInputParamModel(simpleMethodParamModel);
+      }
+
+      if (permittedLayoutInterStateInputAnnotations.contains(annotation.annotationType())) {
+        return new PrepareInterStageInputParamModel(simpleMethodParamModel);
       }
 
       if (annotation instanceof CachedValue) {

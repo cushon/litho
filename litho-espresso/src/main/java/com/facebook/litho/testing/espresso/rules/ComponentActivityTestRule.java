@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,20 +19,23 @@ package com.facebook.litho.testing.espresso.rules;
 import android.app.Instrumentation;
 import android.view.ViewGroup;
 import androidx.test.InstrumentationRegistry;
+import com.facebook.infer.annotation.Nullsafe;
 import com.facebook.litho.Component;
 import com.facebook.litho.ComponentContext;
 import com.facebook.litho.ComponentTree;
 import com.facebook.litho.LithoView;
 import com.facebook.litho.testing.espresso.LithoActivityTestRule;
+import javax.annotation.Nullable;
 
 /**
  * A test rule for instrumentation and screenshot tests that want to render a Component in an
  * Activity. Developers wishing to use this rule can use {@link #setComponent} (along with {@link
  * #getComponentContext}) to show the Component they want rendered.
  */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 public class ComponentActivityTestRule extends LithoActivityTestRule<ComponentActivity> {
 
-  private volatile ComponentContext mComponentContext;
+  @Nullable private volatile ComponentContext mComponentContext;
 
   public ComponentActivityTestRule() {
     super(ComponentActivity.class);
@@ -41,6 +44,7 @@ public class ComponentActivityTestRule extends LithoActivityTestRule<ComponentAc
   @Override
   protected synchronized void afterActivityLaunched() {
     super.afterActivityLaunched();
+    // NULLSAFE_FIXME[Not Vetted Third-Party]
     mComponentContext = new ComponentContext(getActivity());
   }
 
@@ -50,7 +54,9 @@ public class ComponentActivityTestRule extends LithoActivityTestRule<ComponentAc
     mComponentContext = null;
   }
 
-  /** @return a ComponentContext associated with this Activity. */
+  /**
+   * @return a ComponentContext associated with this Activity.
+   */
   public synchronized ComponentContext getComponentContext() {
     if (mComponentContext == null) {
       throw new RuntimeException("Tried to access ComponentContext before Activity was created");
@@ -65,6 +71,7 @@ public class ComponentActivityTestRule extends LithoActivityTestRule<ComponentAc
         new Runnable() {
           @Override
           public void run() {
+            // NULLSAFE_FIXME[Not Vetted Third-Party]
             getActivity().setComponent(component);
           }
         });
@@ -78,14 +85,18 @@ public class ComponentActivityTestRule extends LithoActivityTestRule<ComponentAc
         new Runnable() {
           @Override
           public void run() {
+            // NULLSAFE_FIXME[Not Vetted Third-Party]
             getActivity().setComponentTree(componentTree);
           }
         });
     instrumentation.waitForIdleSync();
   }
 
-  /** @return the LithoView associated with the Activity. */
+  /**
+   * @return the LithoView associated with the Activity.
+   */
   public LithoView getLithoView() {
+    // NULLSAFE_FIXME[Nullable Dereference, Not Vetted Third-Party]
     return (LithoView) ((ViewGroup) getActivity().findViewById(android.R.id.content)).getChildAt(0);
   }
 }

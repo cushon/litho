@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,6 +16,7 @@
 
 package com.facebook.litho.testing.testrule;
 
+import com.facebook.infer.annotation.Nullsafe;
 import com.facebook.litho.config.ComponentsConfiguration;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
@@ -24,6 +25,7 @@ import org.junit.runner.Description;
  * A test rule to be able to turn on/off Litho animations with different granularity, i.e. at
  * class-level, test method level or at code block level.
  */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 public class LithoAnimationEnablerTestRule extends TestWatcher {
 
   private final boolean mOriginalValue =

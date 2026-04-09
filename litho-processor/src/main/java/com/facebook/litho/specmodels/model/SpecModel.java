@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,18 +25,23 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import java.util.EnumSet;
 import java.util.List;
-import javax.annotation.Nullable;
 
 /** A model that represents a ComponentSpec. */
 public interface SpecModel {
 
-  /** @return the name of the spec. */
+  /**
+   * @return the name of the spec.
+   */
   String getSpecName();
 
-  /** @return the {@link TypeName} representing the name of the Spec. */
+  /**
+   * @return the {@link TypeName} representing the name of the Spec.
+   */
   ClassName getSpecTypeName();
 
-  /** @return the name of the component that will be generated from this model. */
+  /**
+   * @return the name of the component that will be generated from this model.
+   */
   String getComponentName();
 
   /**
@@ -45,7 +50,9 @@ public interface SpecModel {
    */
   TypeName getComponentTypeName();
 
-  /** @return the list of fields defined in the spec. */
+  /**
+   * @return the list of fields defined in the spec.
+   */
   ImmutableList<FieldModel> getFields();
 
   /**
@@ -54,19 +61,29 @@ public interface SpecModel {
    */
   ImmutableList<SpecMethodModel<DelegateMethod, Void>> getDelegateMethods();
 
-  /** @return the list of event methods defined by the spec. */
+  /**
+   * @return the list of event methods defined by the spec.
+   */
   ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> getEventMethods();
 
-  /** @return the list of trigger methods defined by the spec. */
+  /**
+   * @return the list of trigger methods defined by the spec.
+   */
   ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> getTriggerMethods();
 
-  /** @return the working range register method defined by the spec. */
+  /**
+   * @return the working range register method defined by the spec.
+   */
   SpecMethodModel<EventMethod, Void> getWorkingRangeRegisterMethod();
 
-  /** @return the list of working ranges methods defined by the spec. */
+  /**
+   * @return the list of working ranges methods defined by the spec.
+   */
   ImmutableList<WorkingRangeMethodModel> getWorkingRangeMethods();
 
-  /** @return the list of methods defined in the spec for updating state. */
+  /**
+   * @return the list of methods defined in the spec for updating state.
+   */
   ImmutableList<SpecMethodModel<UpdateStateMethod, Void>> getUpdateStateMethods();
 
   /**
@@ -79,61 +96,94 @@ public interface SpecModel {
    */
   ImmutableList<PropModel> getRawProps();
 
-  /** @return the set of props that are defined by the spec. */
+  /**
+   * @return the set of props that are defined by the spec.
+   */
   ImmutableList<PropModel> getProps();
 
-  /** @return the list of injected props without name cache adjustments. */
-  ImmutableList<InjectPropModel> getRawInjectProps();
-
-  /** @return the set of injected props that are defined by the spec. */
-  ImmutableList<InjectPropModel> getInjectProps();
-
-  /** @return the set of prop defaults defined by the spec. */
+  /**
+   * @return the set of prop defaults defined by the spec.
+   */
   ImmutableList<PropDefaultModel> getPropDefaults();
 
-  /** @return the type variables that are defined by the spec. */
+  /**
+   * @return the type variables that are defined by the spec.
+   */
   ImmutableList<TypeVariableName> getTypeVariables();
 
-  /** @return the set of state values that are defined by the spec. */
+  /**
+   * @return the set of state values that are defined by the spec.
+   */
   ImmutableList<StateParamModel> getStateValues();
 
-  /** @return the set of cached values that are defined by the spec. */
+  /**
+   * @return the set of cached values that are defined by the spec.
+   */
   ImmutableList<CachedValueParamModel> getCachedValues();
 
-  /** @return the set of inter-stage inputs that are defined by the spec. */
+  /**
+   * @return the set of inter-stage inputs that are defined by the spec.
+   */
   ImmutableList<InterStageInputParamModel> getInterStageInputs();
 
-  /** @return the set of tree props that are defined by the spec. */
+  /**
+   * @return the set of inter-stage inputs that are defined by the spec.
+   */
+  ImmutableList<PrepareInterStageInputParamModel> getPrepareInterStageInputs();
+
+  /**
+   * @return the set of tree props that are defined by the spec.
+   */
   ImmutableList<TreePropModel> getTreeProps();
 
-  /** @return the set of events that are defined by the spec. */
+  /**
+   * @return the set of events that are defined by the spec.
+   */
   ImmutableList<EventDeclarationModel> getEventDeclarations();
 
-  /** @return the set of methods that are implicitly added to the builder. */
+  /**
+   * @return the set of methods that are implicitly added to the builder.
+   */
   ImmutableList<BuilderMethodModel> getExtraBuilderMethods();
 
-  /** @return the set of diff params used within lifecycle methods in the spec. */
+  /**
+   * @return the set of diff params used within lifecycle methods in the spec.
+   */
   ImmutableList<RenderDataDiffModel> getRenderDataDiffs();
 
-  /** @return the set of annotations that should be added to the generated class. */
+  /**
+   * @return the set of annotations that should be added to the generated class.
+   */
   ImmutableList<AnnotationSpec> getClassAnnotations();
 
-  /** @return the set of empty interface tags that should be implemented by the generated class */
+  /**
+   * @return the set of empty interface tags that should be implemented by the generated class
+   */
   ImmutableList<TagModel> getTags();
 
-  /** @return the javadoc for this spec. */
+  /**
+   * @return the javadoc for this spec.
+   */
   String getClassJavadoc();
 
-  /** @return the javadoc for the props defined by the spec. */
+  /**
+   * @return the javadoc for the props defined by the spec.
+   */
   ImmutableList<PropJavadocModel> getPropJavadocs();
 
-  /** @return whether the generated class should be public or not. */
+  /**
+   * @return whether the generated class should be public or not.
+   */
   boolean isPublic();
 
-  /** @return the {@link ClassName} of the context that is used in the generated class. */
+  /**
+   * @return the {@link ClassName} of the context that is used in the generated class.
+   */
   ClassName getContextClass();
 
-  /** @return the {@link ClassName} of the component that is used in the generated class. */
+  /**
+   * @return the {@link ClassName} of the component that is used in the generated class.
+   */
   ClassName getComponentClass();
 
   /**
@@ -141,7 +191,9 @@ public interface SpecModel {
    */
   ClassName getStateContainerClass();
 
-  /** @return the {@link ClassName} of the transition that is used in the generated class. */
+  /**
+   * @return the {@link ClassName} of the transition that is used in the generated class.
+   */
   ClassName getTransitionClass();
 
   /**
@@ -150,36 +202,49 @@ public interface SpecModel {
    */
   ClassName getTransitionContainerClass();
 
-  /** @return the scope method name on the Context class. */
+  /**
+   * @return the scope method name on the Context class.
+   */
   String getScopeMethodName();
 
-  /** @return true if the generated class supports styling, false otherwise. */
+  /**
+   * @return true if the generated class supports styling, false otherwise.
+   */
   boolean isStylingSupported();
 
-  /** @return whether this spec uses dependency injection. */
-  boolean hasInjectedDependencies();
-
-  /** @return whether or not to check component id in isEquivalentTo() method. */
+  /**
+   * @return whether or not to check component id in isEquivalentTo() method.
+   */
   boolean shouldCheckIdInIsEquivalentToMethod();
 
-  /** @return whether or not to deep copy this component. */
+  /**
+   * @return whether or not to deep copy this component.
+   */
   boolean hasDeepCopy();
 
-  /** @return whether or not to generate a hasState method. */
+  /**
+   * @return whether or not to generate a hasState method.
+   */
   boolean shouldGenerateHasState();
 
   /**
-   * @return null if this spec does not use dependency injection, otherwise return the generator
-   *     that should be used to generate the correct methods for dependency injection to work for
-   *     this component.
+   * @return whether or not to generate a transferState method.
    */
-  @Nullable
-  DependencyInjectionHelper getDependencyInjectionHelper();
+  boolean shouldGenerateTransferState();
 
-  /** @return The source type this spec is generated from, e.g. class or singleton. */
+  /**
+   * @return whether or not this component is stateful.
+   */
+  boolean isStateful();
+
+  /**
+   * @return The source type this spec is generated from, e.g. class or singleton.
+   */
   SpecElementType getSpecElementType();
 
-  /** @return the element that this model represents. */
+  /**
+   * @return the element that this model represents.
+   */
   Object getRepresentedObject();
 
   /**
@@ -188,10 +253,14 @@ public interface SpecModel {
    */
   List<SpecModelValidationError> validate(EnumSet<RunMode> runMode);
 
-  /** @return a {@link TypeSpec} representing the class that is generated by this model. */
+  /**
+   * @return a {@link TypeSpec} representing the class that is generated by this model.
+   */
   TypeSpec generate(EnumSet<RunMode> runMode);
 
-  /** @return whether this spec requires deep copy and interstage copy methdods to be generated. */
+  /**
+   * @return whether this spec requires deep copy and interstage copy methods to be generated.
+   */
   boolean shouldGenerateCopyMethod();
 
   /**
@@ -200,4 +269,23 @@ public interface SpecModel {
    *     reflection.
    */
   boolean shouldGenerateIsEquivalentTo();
+
+  default boolean hasBuildTimeValidations() {
+    return false;
+  }
+
+  /**
+   * @return whether the getProps() method should be generated or not. If generated, and the
+   *     corresponding runtime configs are enabled, the equivalence check will take advantage of the
+   *     fields in Component.getProps() which can significantly improve its performance. On the
+   *     other hand, when this method is not generated, the Component.isEquivalentProps() method
+   *     will instead be called to check for equivalence which may use reflection.
+   */
+  default boolean shouldGenerateGetProps() {
+    return false;
+  }
+
+  default boolean shouldGenerateEventHandlerLambdaFactories() {
+    return false;
+  }
 }

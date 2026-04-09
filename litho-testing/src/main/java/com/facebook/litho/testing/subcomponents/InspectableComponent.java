@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,8 @@ package com.facebook.litho.testing.subcomponents;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.view.View;
+import com.facebook.infer.annotation.Nullsafe;
+import com.facebook.litho.BaseMountingView;
 import com.facebook.litho.Component;
 import com.facebook.litho.ComponentHost;
 import com.facebook.litho.DebugComponent;
@@ -27,7 +29,7 @@ import com.facebook.litho.EventHandler;
 import com.facebook.litho.LithoView;
 import com.facebook.litho.LithoViewTestHelper;
 import com.facebook.litho.StateContainer;
-import com.facebook.litho.drawable.ComparableDrawable;
+import com.google.common.base.Preconditions;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -39,6 +41,7 @@ import javax.annotation.concurrent.Immutable;
  * Wraps a {@link DebugComponent} exposing only information that are safe to use for test
  * assertions.
  */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 @Immutable
 public class InspectableComponent {
   private final DebugComponent mComponent;
@@ -51,7 +54,7 @@ public class InspectableComponent {
    * @return The root {@link InspectableComponent} of a LithoView.
    */
   @Nullable
-  public static InspectableComponent getRootInstance(LithoView view) {
+  public static InspectableComponent getRootInstance(BaseMountingView view) {
     final DebugComponent rootInstance = DebugComponent.getRootInstance(view);
 
     if (rootInstance == null) {
@@ -69,7 +72,7 @@ public class InspectableComponent {
     while (!queue.isEmpty()) {
       final DebugComponent childComponent = queue.remove();
 
-      if (childComponent.getComponent() == component) {
+      if (Preconditions.checkNotNull(childComponent).getComponent() == component) {
         return new InspectableComponent(childComponent);
       }
 
@@ -79,12 +82,16 @@ public class InspectableComponent {
     return null;
   }
 
-  /** @return A canonical name for this component. Suitable to present to the user. */
+  /**
+   * @return A canonical name for this component. Suitable to present to the user.
+   */
   public String getName() {
     return mComponent.getComponent().getClass().getName();
   }
 
-  /** @return A simpler canonical name for this component. Suitable to present to the user. */
+  /**
+   * @return A simpler canonical name for this component. Suitable to present to the user.
+   */
   public String getSimpleName() {
     return mComponent.getComponent().getSimpleName();
   }
@@ -114,38 +121,69 @@ public class InspectableComponent {
     return res;
   }
 
-  /** @return A mounted view or null if this component does not mount a view. */
+  /**
+   * @return A mounted view or null if this component does not mount a view.
+   */
   @Nullable
   public View getMountedView() {
     return mComponent.getMountedView();
   }
 
-  /** @return A mounted drawable or null if this component does not mount a drawable. */
+  /**
+   * @return A mounted drawable or null if this component does not mount a drawable.
+   */
   @Nullable
   public Drawable getMountedDrawable() {
     return mComponent.getMountedDrawable();
   }
 
-  /** @return The litho view hosting this component. */
+  /**
+   * @return The litho view hosting this component.
+   */
   @Nullable
-  public LithoView getLithoView() {
+  public BaseMountingView getLithoView() {
     return mComponent.getLithoView();
   }
 
-  /** @return The bounds of this component relative to its hosting {@link LithoView}. */
+  /**
+   * @return The bounds of this component relative to its hosting {@link LithoView}.
+   */
   public Rect getBoundsInLithoView() {
     return mComponent.getBoundsInLithoView();
   }
 
-  /** @return The bounds of this component relative to its parent. */
+  /**
+   * @return The bounds of this component relative to its parent.
+   */
   public Rect getBounds() {
     return mComponent.getBounds();
   }
 
-  /** @return This component's testKey or null if none is set. */
+  /**
+   * @return This component's testKey or null if none is set.
+   */
   @Nullable
   public String getTestKey() {
     return mComponent.getTestKey();
+  }
+
+  /**
+   * Returns this component's testKey or null if none is set.
+   *
+   * <p>Unlike {@link #getTestKey()}, this function can return a test key set on any Component,
+   * including container Components which resolve into LayoutNodes.
+   */
+  @Nullable
+  public String getComponentTestKey() {
+    return mComponent.getComponentTestKey();
+  }
+
+  /**
+   * @return This component's componentTag or null if none is set.
+   */
+  @Nullable
+  public Object getComponentTag() {
+    return mComponent.getComponentTag();
   }
 
   /**
@@ -157,51 +195,75 @@ public class InspectableComponent {
     return mComponent.getTextContent();
   }
 
-  /** @return The {@link ComponentHost} that wraps this component or null if one cannot be found. */
+  /**
+   * @return The {@link ComponentHost} that wraps this component or null if one cannot be found.
+   */
   @Nullable
   public ComponentHost getComponentHost() {
     return mComponent.getComponentHost();
   }
 
-  /** @return This component's key or null if none is set. */
+  /**
+   * @return This component's key or null if none is set.
+   */
   @Nullable
   public String getKey() {
     return mComponent.getKey();
   }
 
-  /** @return The Component instance this debug component wraps. */
+  /**
+   * @return The Component instance this debug component wraps.
+   */
   public Component getComponent() {
     return mComponent.getComponent();
   }
 
-  /** @return The foreground drawable asscociated with this debug component. May be null. */
+  /**
+   * @return The foreground drawable asscociated with this debug component. May be null.
+   */
   @Nullable
   public Drawable getForeground() {
     final DebugLayoutNode layout = mComponent.getLayoutNode();
     return layout == null ? null : layout.getForeground();
   }
 
-  /** @return The background drawable asscociated with this debug component. May be null. */
+  /**
+   * @return The background drawable asscociated with this debug component. May be null.
+   */
   @Nullable
-  public ComparableDrawable getBackground() {
+  public Drawable getBackground() {
     final DebugLayoutNode layout = mComponent.getLayoutNode();
     return layout == null ? null : layout.getBackground();
   }
 
-  /** @return The int value of the importantForAccessibility property on this debug component. */
+  /**
+   * @return The int value of the importantForAccessibility property on this debug component.
+   */
   @Nullable
   public Integer getImportantForAccessibility() {
     final DebugLayoutNode layout = mComponent.getLayoutNode();
     return layout == null ? null : layout.getImportantForAccessibility();
   }
 
-  /** @return The boolean value of the focusable property on this debug component. */
+  /**
+   * @return The boolean value of the focusable property on this debug component.
+   */
   public boolean getFocusable() {
     final DebugLayoutNode layout = mComponent.getLayoutNode();
-    return layout == null ? false : layout.getFocusable();
+    return layout != null && layout.getFocusable();
   }
 
-  /** @return The content description CharSequence on this debug component. May be null. */
+  /**
+   * @return The boolean value of the screenReaderFocusable property on this debug component.
+   */
+  public boolean getScreenReaderFocusable() {
+    final DebugLayoutNode layout = mComponent.getLayoutNode();
+    return layout != null && layout.getScreenReaderFocusable();
+  }
+
+  /**
+   * @return The content description CharSequence on this debug component. May be null.
+   */
   @Nullable
   public CharSequence getContentDescription() {
     final DebugLayoutNode layout = mComponent.getLayoutNode();
@@ -229,6 +291,7 @@ public class InspectableComponent {
     sb.append("InspectableComponent of ");
     sb.append(getSimpleName());
     sb.append(" with hierarchy\n");
+    // NULLSAFE_FIXME[Parameter Not Nullable]
     sb.append(LithoViewTestHelper.viewToString(mComponent.getLithoView()));
 
     return sb.toString();

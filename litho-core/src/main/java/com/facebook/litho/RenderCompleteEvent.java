@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,6 +16,7 @@
 
 package com.facebook.litho;
 
+import com.facebook.infer.annotation.Nullsafe;
 import com.facebook.litho.annotations.Event;
 
 /**
@@ -27,6 +28,7 @@ import com.facebook.litho.annotations.Event;
  * @param timestampMillis is the timestamp when the component is rendered complete, computed using
  *     SystemClock.uptimeMillis.
  */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 @Event
 public class RenderCompleteEvent {
 
@@ -36,6 +38,7 @@ public class RenderCompleteEvent {
     FAILED_EXCEED_MAX_ATTEMPTS
   }
 
+  // NULLSAFE_FIXME[Field Not Initialized]
   public RenderState renderState;
   public long timestampMillis;
 }

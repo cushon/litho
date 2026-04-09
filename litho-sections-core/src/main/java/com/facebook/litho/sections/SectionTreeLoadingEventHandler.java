@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,10 @@
 
 package com.facebook.litho.sections;
 
+import androidx.annotation.Nullable;
+import com.facebook.litho.EventDispatchInfo;
 import com.facebook.litho.EventHandler;
+import com.facebook.litho.annotations.EventHandlerRebindMode;
 import java.lang.ref.WeakReference;
 
 public class SectionTreeLoadingEventHandler extends EventHandler<LoadingEvent> {
@@ -25,23 +28,25 @@ public class SectionTreeLoadingEventHandler extends EventHandler<LoadingEvent> {
   private final WeakReference<SectionTree> mSectionTree;
 
   SectionTreeLoadingEventHandler(SectionTree sectionTree) {
-    super(null, INVALID_ID);
+    super(INVALID_ID, EventHandlerRebindMode.NONE, new EventDispatchInfo(null, null), null);
     mSectionTree = new WeakReference<>(sectionTree);
   }
 
   SectionTreeLoadingEventHandler(SectionTree sectionTree, int id, Object[] params) {
-    super(null, id, params);
+    super(id, EventHandlerRebindMode.NONE, new EventDispatchInfo(null, null), params);
     mSectionTree = new WeakReference<>(sectionTree);
   }
 
   @Override
-  public void dispatchEvent(LoadingEvent event) {
+  public @Nullable Object dispatchEvent(LoadingEvent event) {
     final SectionTree sectionTree = mSectionTree.get();
     if (sectionTree == null) {
       // This SectionTree has been released. Ignore the LoadingEvent
-      return;
+      return null;
     }
 
     sectionTree.dispatchLoadingEvent(event);
+
+    return null;
   }
 }

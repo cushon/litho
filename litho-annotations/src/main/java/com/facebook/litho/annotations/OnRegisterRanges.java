@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,7 +20,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * The method annotated with this annotation will be called to register working ranges for the
+ * Deprecated: Please avoid using this annotation and it will be not supported in the future release
+ *
+ * <p>The method annotated with this annotation will be called to register working ranges for the
  * {@link LayoutSpec}.
  *
  * <p>For example
@@ -38,5 +40,6 @@ import java.lang.annotation.RetentionPolicy;
  * </code>
  * </pre>
  */
+@Deprecated
 @Retention(RetentionPolicy.CLASS)
 public @interface OnRegisterRanges {}

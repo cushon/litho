@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,7 +17,6 @@
 package com.facebook.litho.specmodels.processor;
 
 import com.facebook.litho.specmodels.internal.ImmutableList;
-import com.facebook.litho.specmodels.model.InjectPropModel;
 import com.facebook.litho.specmodels.model.PropModel;
 import com.facebook.litho.specmodels.model.SpecModel;
 import java.io.BufferedReader;
@@ -47,7 +46,7 @@ import javax.tools.StandardLocation;
 public class PropNameInterStageStore {
   private final Filer mFiler;
 
-  private static final String BASE_PATH = "META-INF/litho/";
+  private static final String BASE_PATH = "_STRIPPED_RESOURCES/litho/";
   private static final String FILE_EXT = ".props";
 
   public PropNameInterStageStore(Filer filer) {
@@ -96,10 +95,6 @@ public class PropNameInterStageStore {
     try (Writer writer =
         new BufferedWriter(new OutputStreamWriter(outputFile.openOutputStream()))) {
       for (final PropModel propModel : specModel.getRawProps()) {
-        writer.write(propModel.getName() + "\n");
-      }
-
-      for (final InjectPropModel propModel : specModel.getRawInjectProps()) {
         writer.write(propModel.getName() + "\n");
       }
     }

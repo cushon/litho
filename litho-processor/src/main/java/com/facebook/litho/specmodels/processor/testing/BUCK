@@ -1,14 +1,27 @@
+load("@fbsource//xplat/pfh/FBApp_UIFrameworks_Litho_Litho:DEFS.bzl", "FBApp_UIFrameworks_Litho_Litho")
+
 # Copyright (c) 2017-present, Facebook, Inc.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
-load("//tools/build_defs/oss:litho_defs.bzl", "LITHO_ANNOTATIONS_TARGET", "LITHO_JAVAC_TOOLS_TARGET", "LITHO_JAVAPOET_TARGET", "LITHO_JSR_TARGET", "fb_java_library", "make_dep_path")
+load(
+    "//tools/build_defs/oss:litho_defs.bzl",
+    "LITHO_ANNOTATIONPROCESSORS_COMMON_TARGET",
+    "LITHO_ANNOTATIONS_TARGET",
+    "LITHO_JAVAPOET_TARGET",
+    "LITHO_JSR_TARGET",
+    "fb_java_library",
+    "make_dep_path",
+)
+
+oncall("litho_components_for_android")
 
 fb_java_library(
     name = "testing",
     srcs = glob(["*.java"]),
+    feature = FBApp_UIFrameworks_Litho_Litho,
+    labels = [],
     provided_deps = [
-        LITHO_JAVAC_TOOLS_TARGET,
         LITHO_JAVAPOET_TARGET,
         LITHO_JSR_TARGET,
     ],
@@ -18,6 +31,8 @@ fb_java_library(
         "PUBLIC",
     ],
     deps = [
+        "//fbandroid/third-party/java/infer-annotations:infer-annotations",
+        LITHO_ANNOTATIONPROCESSORS_COMMON_TARGET,
         LITHO_ANNOTATIONS_TARGET,
         make_dep_path("litho-processor/src/main/java/com/facebook/litho/specmodels:specmodels-bare"),
         make_dep_path("litho-processor/src/main/java/com/facebook/litho/specmodels/generator/testing:testing"),

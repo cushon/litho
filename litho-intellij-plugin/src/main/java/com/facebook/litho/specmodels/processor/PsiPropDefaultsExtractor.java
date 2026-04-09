@@ -1,11 +1,11 @@
 /*
- * Copyright 2017-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.facebook.litho.specmodels.processor;
 
+import com.facebook.infer.annotation.Nullsafe;
 import com.facebook.litho.annotations.PropDefault;
 import com.facebook.litho.annotations.ResType;
 import com.facebook.litho.specmodels.internal.ImmutableList;
@@ -26,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Extracts prop defaults from the given input. */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 public class PsiPropDefaultsExtractor {
 
   /** Get the prop defaults from the given {@link PsiClass}. */
@@ -53,9 +56,11 @@ public class PsiPropDefaultsExtractor {
         new PropDefaultModel(
             PsiTypeUtils.getTypeName(psiField.getType()),
             psiField.getName(),
-            PsiProcessingUtils.extractModifiers(psiField.getModifierList()),
+            // NULLSAFE_FIXME[Parameter Not Nullable]
+            PsiModifierExtractor.extractModifiers(psiField.getModifierList()),
             psiField,
             propDefaultResType,
-            propDefaultResId));
+            propDefaultResId,
+            PropDefaultModel.AccessorType.FIELD));
   }
 }

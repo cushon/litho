@@ -1,12 +1,12 @@
-# Litho [![CircleCI](https://circleci.com/gh/facebook/litho/tree/master.svg?style=shield)](https://circleci.com/gh/facebook/litho/tree/master) [![Bintray](https://img.shields.io/maven-metadata/v/https/jcenter.bintray.com/com/facebook/litho/litho-core/maven-metadata.xml.svg?color=orange&label=bintray)](https://bintray.com/facebook/maven/com.facebook.litho%3Alitho-core/_latestVersion) [![Join the chat at https://gitter.im/facebook/litho](https://badges.gitter.im/facebook/litho.svg)](https://gitter.im/facebook/litho?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+# Litho [![GithubCI](https://github.com/facebook/litho/actions/workflows/ci.yml/badge.svg)](https://github.com/facebook/litho/actions/workflows/ci.yml) [![Bintray](https://img.shields.io/maven-metadata/v/https/jcenter.bintray.com/com/facebook/litho/litho-core/maven-metadata.xml.svg?color=orange&label=bintray)](https://bintray.com/facebook/maven/com.facebook.litho%3Alitho-core/_latestVersion) [![Join the chat at https://gitter.im/facebook/litho](https://badges.gitter.im/facebook/litho.svg)](https://gitter.im/facebook/litho?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/facebook/litho/blob/master/LICENSE)
 
-<img src="docs/static/logo.png" width=150 align=right>
+<img src="website/static/logo.png" width=150 align=right>
 
 Litho is a declarative framework for building efficient UIs on Android.
 
 * **Declarative:** Litho uses a declarative API to define UI components. You simply describe the layout for your UI based on a set of immutable inputs and the framework takes care of the rest.
 * **Asynchronous layout:** Litho can measure and layout your UI ahead of time without blocking the UI thread.
-* **View flattening:** Litho uses [Yoga](https://facebook.github.io/yoga/) for layout and automatically reduces the number of ViewGroups that your UI contains.
+* **View flattening:** Litho uses [Yoga](https://www.yogalayout.dev/) for layout and automatically reduces the number of ViewGroups that your UI contains.
 * **Fine-grained recycling:** Any component such as a text or image can be recycled and reused anywhere in the UI.
 
 To get started, check out these links:
@@ -35,14 +35,14 @@ public class SampleApplication extends Application {
 public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
-    final ComponentContext context = new ComponentContext(this);
+    final ComponentContext c = new ComponentContext(this);
 
-    final Component component = Text.create(context)
+    final Component component = Text.create(c)
         .text("Hello World")
         .textSizeDip(50)
         .build();
 
-    setContentView(LithoView.create(context, component));
+    setContentView(LithoView.create(c, component));
 }
 ```
 ## Run sample

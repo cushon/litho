@@ -1,11 +1,11 @@
 /*
- * Copyright 2019-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.facebook.litho.codelab
 
 import androidx.recyclerview.widget.OrientationHelper
@@ -30,13 +31,15 @@ import com.facebook.litho.sections.widget.ListRecyclerConfiguration
 import com.facebook.litho.sections.widget.RecyclerBinderConfiguration
 import com.facebook.litho.sections.widget.RecyclerCollectionComponent
 import com.facebook.litho.widget.ComponentRenderInfo
+import com.facebook.litho.widget.RecyclerBinderConfig
 import com.facebook.litho.widget.RenderInfo
+import com.facebook.litho.widget.collection.CrossAxisWrapMode
 
 /**
- * This component renders a horizontal list with items of various heights, which can adapt height
- * to always accommodate the height of the tallest item. If the height of the h-scroll is already
- * taller than the highest item it will not shrink to fit.
- * Measuring the height this way is extremely inefficient.
+ * This component renders a horizontal list with items of various heights, which can adapt height to
+ * always accommodate the height of the tallest item. If the height of the h-scroll is already
+ * taller than the highest item it will not shrink to fit. Measuring the height this way is
+ * extremely inefficient.
  */
 @Suppress("MagicNumber")
 @LayoutSpec
@@ -50,15 +53,17 @@ object DynamicHeightHscrollComponentSpec {
             ListRecyclerConfiguration.create()
                 .recyclerBinderConfiguration(
                     RecyclerBinderConfiguration.create()
-                        .hasDynamicItemHeight(true) // This enables dynamic height measurement.
+                        // This enables dynamic height measurement.
+                        .recyclerBinderConfig(
+                            RecyclerBinderConfig(crossAxisWrapMode = CrossAxisWrapMode.Dynamic))
                         .build())
-                .orientation(OrientationHelper.HORIZONTAL).build())
+                .orientation(OrientationHelper.HORIZONTAL)
+                .build())
         .section(
             DataDiffSection.create<Int>(SectionContext(c))
                 .data(colors)
                 .renderEventHandler(DynamicHeightHscrollComponent.onRender(c))
                 .build())
-        .canMeasureRecycler(true)
         .build()
   }
 

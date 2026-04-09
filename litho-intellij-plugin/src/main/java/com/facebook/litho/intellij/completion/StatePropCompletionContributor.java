@@ -1,11 +1,11 @@
 /*
- * Copyright 2004-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,9 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.facebook.litho.intellij.completion;
 
-import com.facebook.litho.intellij.LithoClassNames;
+import com.facebook.infer.annotation.Nullsafe;
+import com.facebook.litho.annotations.Prop;
+import com.facebook.litho.annotations.State;
 import com.facebook.litho.intellij.LithoPluginUtils;
 import com.intellij.codeInsight.completion.CompletionContributor;
 import com.intellij.codeInsight.completion.CompletionParameters;
@@ -49,6 +52,7 @@ import org.jetbrains.annotations.NotNull;
  * Offers completion for the {@code @Prop} and {@code @State} method parameters in the Litho Spec
  * class.
  */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 public class StatePropCompletionContributor extends CompletionContributor {
   public StatePropCompletionContributor() {
     extend(CompletionType.BASIC, codeReferencePattern(), typeCompletionProvider());
@@ -90,11 +94,13 @@ public class StatePropCompletionContributor extends CompletionContributor {
         if (parameterModifiers == null) {
           return;
         }
-        if (parameterModifiers.findAnnotation(LithoClassNames.PROP_CLASS_NAME) != null) {
+        if (parameterModifiers.findAnnotation(Prop.class.getName()) != null) {
           addCompletionResult(
+              // NULLSAFE_FIXME[Nullable Dereference]
               completionResultSet, containingMethod, cls.getMethods(), LithoPluginUtils::isProp);
-        } else if (parameterModifiers.findAnnotation(LithoClassNames.STATE_CLASS_NAME) != null) {
+        } else if (parameterModifiers.findAnnotation(State.class.getName()) != null) {
           addCompletionResult(
+              // NULLSAFE_FIXME[Nullable Dereference]
               completionResultSet, containingMethod, cls.getMethods(), LithoPluginUtils::isState);
         }
       }
@@ -126,7 +132,9 @@ public class StatePropCompletionContributor extends CompletionContributor {
   static LookupElement createCompletionResult(PsiParameter parameter) {
     return LookupElementBuilder.create(
         new StringJoiner(" ")
+            // NULLSAFE_FIXME[Not Vetted Third-Party]
             .add(parameter.getType().getPresentableText())
+            // NULLSAFE_FIXME[Not Vetted Third-Party]
             .add(parameter.getName())
             .toString());
   }

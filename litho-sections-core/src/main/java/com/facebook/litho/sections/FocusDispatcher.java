@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,6 +18,7 @@ package com.facebook.litho.sections;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
+import com.facebook.infer.annotation.Nullsafe;
 import com.facebook.litho.widget.SmoothScrollAlignmentType;
 
 /**
@@ -31,6 +32,7 @@ import com.facebook.litho.widget.SmoothScrollAlignmentType;
  * <p>Both of these states have to be completed before the focus request can be dispatched.
  * Otherwise, the last known request will be kept until the states are valid again.
  */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 class FocusDispatcher {
 
   private final SectionTree.Target mTarget;
@@ -62,6 +64,14 @@ class FocusDispatcher {
     queueRequest(index, 0);
   }
 
+  @UiThread
+  void requestSmoothFocus(Object id, int offset, SmoothScrollAlignmentType type) {
+    if (shouldDispatchRequests()) {
+      mTarget.requestSmoothFocus(id, offset, type);
+      return;
+    }
+  }
+
   /**
    * Request focus to a specific index position with an offset.
    *
@@ -76,6 +86,14 @@ class FocusDispatcher {
     }
 
     queueRequest(index, offset);
+  }
+
+  @UiThread
+  void requestFocusWithOffset(Object id, int offset) {
+    if (shouldDispatchRequests()) {
+      mTarget.requestFocusWithOffset(id, offset);
+      return;
+    }
   }
 
   /** Dispatch focus request if there is an existing request and the states are valid. */
@@ -109,7 +127,9 @@ class FocusDispatcher {
     mWaitForDataBound = waitForDataBound;
   }
 
-  /** @return true if the data fetching has been completed. */
+  /**
+   * @return true if the data fetching has been completed.
+   */
   @UiThread
   boolean isLoadingCompleted() {
     return mLoadingState == null

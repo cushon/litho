@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,24 +16,23 @@
 
 package com.facebook.litho.specmodels.model;
 
+import static com.facebook.litho.specmodels.generator.ComponentBodyGenerator.STATE_CONTAINER_ARGUMENT_NAME;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.CACHED_VALUE;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.DIFF;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.DIFF_PROP;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.DIFF_STATE;
-import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.INJECT_PROP;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.INTER_STAGE_OUTPUT;
+import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.PREPARE_INTER_STAGE_OUTPUT;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.PROP;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.PROP_OUTPUT;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.STATE;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.STATE_VALUE;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.TREE_PROP;
 
-import com.facebook.litho.annotations.FromBind;
 import com.facebook.litho.annotations.FromBoundsDefined;
 import com.facebook.litho.annotations.FromMeasure;
 import com.facebook.litho.annotations.FromMeasureBaseline;
 import com.facebook.litho.annotations.FromPrepare;
-import com.facebook.litho.annotations.FromPreviousCreateLayout;
 import com.facebook.litho.annotations.GetExtraAccessibilityNodeAt;
 import com.facebook.litho.annotations.GetExtraAccessibilityNodesCount;
 import com.facebook.litho.annotations.OnAttached;
@@ -51,13 +50,15 @@ import com.facebook.litho.annotations.OnLoadStyle;
 import com.facebook.litho.annotations.OnMeasure;
 import com.facebook.litho.annotations.OnMeasureBaseline;
 import com.facebook.litho.annotations.OnMount;
+import com.facebook.litho.annotations.OnPerformActionForVirtualView;
 import com.facebook.litho.annotations.OnPopulateAccessibilityNode;
 import com.facebook.litho.annotations.OnPopulateExtraAccessibilityNode;
 import com.facebook.litho.annotations.OnPrepare;
-import com.facebook.litho.annotations.OnShouldCreateLayoutWithNewSizeSpec;
 import com.facebook.litho.annotations.OnUnbind;
 import com.facebook.litho.annotations.OnUnmount;
+import com.facebook.litho.annotations.OnVirtualViewKeyboardFocusChanged;
 import com.facebook.litho.annotations.ShouldAlwaysRemeasure;
+import com.facebook.litho.annotations.ShouldExcludeFromIncrementalMount;
 import com.facebook.litho.annotations.ShouldUpdate;
 import com.facebook.litho.specmodels.internal.ImmutableList;
 import com.squareup.javapoet.AnnotationSpec;
@@ -70,17 +71,16 @@ import java.util.Map;
 import java.util.TreeMap;
 import javax.lang.model.element.Modifier;
 
-/**
- * Descriptions of delegate methods.
- */
+/** Descriptions of delegate methods. */
 public final class DelegateMethodDescriptions {
   public static final DelegateMethodDescription ON_LOAD_STYLE =
       DelegateMethodDescription.newBuilder()
-          .annotations(ImmutableList.of(
-              AnnotationSpec.builder(SuppressWarnings.class)
-                  .addMember("value", "$S", "unchecked")
-                  .build(),
-              AnnotationSpec.builder(Override.class).build()))
+          .annotations(
+              ImmutableList.of(
+                  AnnotationSpec.builder(SuppressWarnings.class)
+                      .addMember("value", "$S", "unchecked")
+                      .build(),
+                  AnnotationSpec.builder(Override.class).build()))
           .accessType(Modifier.PROTECTED)
           .returnType(TypeName.VOID)
           .name("onLoadStyle")
@@ -95,8 +95,7 @@ public final class DelegateMethodDescriptions {
           .returnType(ClassNames.COMPONENT)
           .name("onCreateLayout")
           .definedParameterTypes(ImmutableList.<TypeName>of(ClassNames.COMPONENT_CONTEXT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .build();
 
   public static final DelegateMethodDescription ON_ERROR =
@@ -107,8 +106,15 @@ public final class DelegateMethodDescriptions {
           .name("onError")
           .definedParameterTypes(
               ImmutableList.<TypeName>of(ClassNames.COMPONENT_CONTEXT, ClassNames.EXCEPTION))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
+          .extraMethods(
+              ImmutableList.of(
+                  MethodSpec.methodBuilder("hasOwnErrorHandler")
+                      .addAnnotation(Override.class)
+                      .addModifiers(Modifier.PROTECTED)
+                      .returns(TypeName.BOOLEAN)
+                      .addStatement("return true")
+                      .build()))
           .build();
 
   public static final DelegateMethodDescription ON_CREATE_LAYOUT_WITH_SIZE_SPEC =
@@ -120,34 +126,10 @@ public final class DelegateMethodDescriptions {
           .definedParameterTypes(
               ImmutableList.of(ClassNames.COMPONENT_CONTEXT, TypeName.INT, TypeName.INT))
           .optionalParameterTypes(
-              ImmutableList.of(
-                  PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, INJECT_PROP, CACHED_VALUE))
+              ImmutableList.of(PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, CACHED_VALUE))
           .extraMethods(
               ImmutableList.of(
                   MethodSpec.methodBuilder("canMeasure")
-                      .addAnnotation(Override.class)
-                      .addModifiers(Modifier.PROTECTED)
-                      .returns(TypeName.BOOLEAN)
-                      .addStatement("return true")
-                      .build()))
-          .build();
-
-  public static final DelegateMethodDescription ON_SHOULD_CREATE_LAYOUT_WITH_NEW_SIZE_SPEC =
-      DelegateMethodDescription.newBuilder()
-          .annotations(ImmutableList.of(AnnotationSpec.builder(Override.class).build()))
-          .accessType(Modifier.PROTECTED)
-          .returnType(TypeName.BOOLEAN)
-          .name("onShouldCreateLayoutWithNewSizeSpec")
-          .definedParameterTypes(
-              ImmutableList.of(ClassNames.COMPONENT_CONTEXT, TypeName.INT, TypeName.INT))
-          .optionalParameterTypes(
-              ImmutableList.of(
-                  PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, INJECT_PROP, CACHED_VALUE))
-          .interStageInputAnnotations(
-              ImmutableList.<Class<? extends Annotation>>of(FromPreviousCreateLayout.class))
-          .extraMethods(
-              ImmutableList.of(
-                  MethodSpec.methodBuilder("isLayoutSpecWithSizeSpecCheck")
                       .addAnnotation(Override.class)
                       .addModifiers(Modifier.PROTECTED)
                       .returns(TypeName.BOOLEAN)
@@ -161,8 +143,13 @@ public final class DelegateMethodDescriptions {
           .accessType(Modifier.PROTECTED)
           .returnType(TypeName.VOID)
           .name("createInitialState")
-          .definedParameterTypes(ImmutableList.<TypeName>of(ClassNames.COMPONENT_CONTEXT))
-          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE_VALUE, INJECT_PROP))
+          .lifecycleMethodArguments(
+              ImmutableList.of(
+                  LifecycleMethodArgumentType.COMPONENT_CONTEXT,
+                  new LifecycleMethodArgumentType(
+                      ClassNames.STATE_CONTAINER, STATE_CONTAINER_ARGUMENT_NAME)))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE_VALUE))
+          .initializesStateContainer(true)
           .build();
 
   public static final DelegateMethodDescription ON_CREATE_TRANSITION =
@@ -172,8 +159,7 @@ public final class DelegateMethodDescriptions {
           .returnType(ClassNames.TRANSITION)
           .name("onCreateTransition")
           .definedParameterTypes(ImmutableList.<TypeName>of(ClassNames.COMPONENT_CONTEXT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, DIFF, INJECT_PROP, CACHED_VALUE))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, DIFF, CACHED_VALUE))
           .build();
 
   public static final DelegateMethodDescription ON_PREPARE =
@@ -184,8 +170,8 @@ public final class DelegateMethodDescriptions {
           .name("onPrepare")
           .definedParameterTypes(ImmutableList.<TypeName>of(ClassNames.COMPONENT_CONTEXT))
           .optionalParameterTypes(
-              ImmutableList.of(
-                  PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, INJECT_PROP, CACHED_VALUE))
+              ImmutableList.of(PROP, TREE_PROP, STATE, PREPARE_INTER_STAGE_OUTPUT, CACHED_VALUE))
+          .interStageInputTarget(DelegateMethodDescription.InterStagePropsTarget.PREPARE)
           .build();
 
   public static final DelegateMethodDescription ON_MEASURE =
@@ -200,10 +186,10 @@ public final class DelegateMethodDescriptions {
                   ClassNames.COMPONENT_LAYOUT,
                   TypeName.INT,
                   TypeName.INT,
-                  ClassNames.SIZE))
+                  ClassNames.SIZE,
+                  ClassNames.INTER_STAGE_PROPS_CONTAINER))
           .optionalParameterTypes(
-              ImmutableList.of(
-                  PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, INJECT_PROP, CACHED_VALUE))
+              ImmutableList.of(PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, CACHED_VALUE))
           .interStageInputAnnotations(
               ImmutableList.<Class<? extends Annotation>>of(FromPrepare.class))
           .extraMethods(
@@ -225,8 +211,7 @@ public final class DelegateMethodDescriptions {
           .definedParameterTypes(
               ImmutableList.of(ClassNames.COMPONENT_CONTEXT, TypeName.INT, TypeName.INT))
           .optionalParameterTypes(
-              ImmutableList.of(
-                  PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, INJECT_PROP, CACHED_VALUE))
+              ImmutableList.of(PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, CACHED_VALUE))
           .interStageInputAnnotations(
               ImmutableList.<Class<? extends Annotation>>of(FromPrepare.class))
           .build();
@@ -238,10 +223,12 @@ public final class DelegateMethodDescriptions {
           .returnType(TypeName.VOID)
           .name("onBoundsDefined")
           .definedParameterTypes(
-              ImmutableList.<TypeName>of(ClassNames.COMPONENT_CONTEXT, ClassNames.COMPONENT_LAYOUT))
+              ImmutableList.<TypeName>of(
+                  ClassNames.COMPONENT_CONTEXT,
+                  ClassNames.COMPONENT_LAYOUT,
+                  ClassNames.INTER_STAGE_PROPS_CONTAINER))
           .optionalParameterTypes(
-              ImmutableList.of(
-                  PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, INJECT_PROP, CACHED_VALUE))
+              ImmutableList.of(PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, CACHED_VALUE))
           .interStageInputAnnotations(
               ImmutableList.of(FromPrepare.class, FromMeasure.class, FromMeasureBaseline.class))
           .build();
@@ -253,17 +240,17 @@ public final class DelegateMethodDescriptions {
           .returnType(TypeName.OBJECT)
           .name("onCreateMountContent")
           .definedParameterTypes(ImmutableList.<TypeName>of(ClassNames.ANDROID_CONTEXT))
-          .optionalParameterTypes(ImmutableList.of(INJECT_PROP))
+          .optionalParameterTypes(ImmutableList.of())
           .build();
 
   public static final DelegateMethodDescription ON_CREATE_MOUNT_CONTENT_POOL =
       DelegateMethodDescription.newBuilder()
           .annotations(ImmutableList.of(AnnotationSpec.builder(Override.class).build()))
-          .accessType(Modifier.PROTECTED)
+          .accessType(Modifier.PUBLIC)
           .returnType(ClassNames.MOUNT_CONTENT_POOL)
           .name("onCreateMountContentPool")
-          .definedParameterTypes(ImmutableList.<TypeName>of())
-          .optionalParameterTypes(ImmutableList.of(INJECT_PROP))
+          .definedParameterTypes(ImmutableList.<TypeName>of(TypeName.INT))
+          .optionalParameterTypes(ImmutableList.of())
           .build();
 
   public static final DelegateMethodDescription ON_MOUNT =
@@ -273,10 +260,12 @@ public final class DelegateMethodDescriptions {
           .returnType(TypeName.VOID)
           .name("onMount")
           .definedParameterTypes(
-              ImmutableList.<TypeName>of(ClassNames.COMPONENT_CONTEXT, ClassNames.OBJECT))
+              ImmutableList.<TypeName>of(
+                  ClassNames.COMPONENT_CONTEXT,
+                  ClassNames.OBJECT,
+                  ClassNames.INTER_STAGE_PROPS_CONTAINER))
           .optionalParameterTypes(
-              ImmutableList.of(
-                  PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, INJECT_PROP, CACHED_VALUE))
+              ImmutableList.of(PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, CACHED_VALUE))
           .interStageInputAnnotations(
               ImmutableList.of(
                   FromPrepare.class,
@@ -292,10 +281,12 @@ public final class DelegateMethodDescriptions {
           .returnType(TypeName.VOID)
           .name("onBind")
           .definedParameterTypes(
-              ImmutableList.<TypeName>of(ClassNames.COMPONENT_CONTEXT, ClassNames.OBJECT))
+              ImmutableList.<TypeName>of(
+                  ClassNames.COMPONENT_CONTEXT,
+                  ClassNames.OBJECT,
+                  ClassNames.INTER_STAGE_PROPS_CONTAINER))
           .optionalParameterTypes(
-              ImmutableList.of(
-                  PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, INJECT_PROP, CACHED_VALUE))
+              ImmutableList.of(PROP, TREE_PROP, STATE, INTER_STAGE_OUTPUT, CACHED_VALUE))
           .interStageInputAnnotations(
               ImmutableList.of(
                   FromPrepare.class,
@@ -311,16 +302,17 @@ public final class DelegateMethodDescriptions {
           .returnType(TypeName.VOID)
           .name("onUnbind")
           .definedParameterTypes(
-              ImmutableList.<TypeName>of(ClassNames.COMPONENT_CONTEXT, ClassNames.OBJECT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+              ImmutableList.<TypeName>of(
+                  ClassNames.COMPONENT_CONTEXT,
+                  ClassNames.OBJECT,
+                  ClassNames.INTER_STAGE_PROPS_CONTAINER))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .interStageInputAnnotations(
               ImmutableList.of(
                   FromPrepare.class,
                   FromMeasure.class,
                   FromMeasureBaseline.class,
-                  FromBoundsDefined.class,
-                  FromBind.class))
+                  FromBoundsDefined.class))
           .build();
 
   public static final DelegateMethodDescription ON_UNMOUNT =
@@ -330,9 +322,11 @@ public final class DelegateMethodDescriptions {
           .returnType(TypeName.VOID)
           .name("onUnmount")
           .definedParameterTypes(
-              ImmutableList.<TypeName>of(ClassNames.COMPONENT_CONTEXT, ClassNames.OBJECT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+              ImmutableList.<TypeName>of(
+                  ClassNames.COMPONENT_CONTEXT,
+                  ClassNames.OBJECT,
+                  ClassNames.INTER_STAGE_PROPS_CONTAINER))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .interStageInputAnnotations(
               ImmutableList.of(
                   FromPrepare.class,
@@ -348,7 +342,47 @@ public final class DelegateMethodDescriptions {
           .returnType(TypeName.BOOLEAN)
           .name("shouldUpdate")
           .definedParameterTypes(ImmutableList.of())
-          .optionalParameterTypes(ImmutableList.of(DIFF_PROP, DIFF_STATE, INJECT_PROP))
+          .optionalParameterTypes(ImmutableList.of(DIFF_PROP, DIFF_STATE))
+          .extraMethods(
+              ImmutableList.of(
+                  MethodSpec.methodBuilder("implementsShouldUpdate")
+                      .addAnnotation(Override.class)
+                      .addModifiers(Modifier.PUBLIC)
+                      .returns(TypeName.BOOLEAN)
+                      .addStatement("return true")
+                      .build()))
+          .build();
+
+  public static final DelegateMethodDescription ON_PERFORM_ACTION_FOR_VIRTUAL_VIEW =
+      DelegateMethodDescription.newBuilder()
+          .annotations(ImmutableList.of(AnnotationSpec.builder(Override.class).build()))
+          .accessType(Modifier.PROTECTED)
+          .returnType(TypeName.BOOLEAN)
+          .name("onPerformActionForVirtualView")
+          .lifecycleMethodArguments(
+              ImmutableList.of(
+                  LifecycleMethodArgumentType.COMPONENT_CONTEXT,
+                  LifecycleMethodArgumentType.VIEW,
+                  LifecycleMethodArgumentType.ACCESSIBILITY_NODE,
+                  LifecycleMethodArgumentType.INT,
+                  LifecycleMethodArgumentType.INT,
+                  LifecycleMethodArgumentType.BUNDLE,
+                  LifecycleMethodArgumentType.INTER_STAGE_PROPS_CONTAINER))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
+          .interStageInputAnnotations(
+              ImmutableList.of(
+                  FromPrepare.class,
+                  FromMeasure.class,
+                  FromMeasureBaseline.class,
+                  FromBoundsDefined.class))
+          .extraMethods(
+              ImmutableList.of(
+                  MethodSpec.methodBuilder("implementsOnPerformActionForVirtualView")
+                      .addAnnotation(Override.class)
+                      .addModifiers(Modifier.PUBLIC)
+                      .returns(TypeName.BOOLEAN)
+                      .addStatement("return true")
+                      .build()))
           .build();
 
   public static final DelegateMethodDescription ON_POPULATE_ACCESSIBILITY_NODE =
@@ -358,19 +392,52 @@ public final class DelegateMethodDescriptions {
           .returnType(TypeName.VOID)
           .name("onPopulateAccessibilityNode")
           .definedParameterTypes(
-              ImmutableList.<TypeName>of(ClassNames.VIEW, ClassNames.ACCESSIBILITY_NODE))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+              ImmutableList.<TypeName>of(
+                  ClassNames.COMPONENT_CONTEXT,
+                  ClassNames.VIEW,
+                  ClassNames.ACCESSIBILITY_NODE,
+                  ClassNames.INTER_STAGE_PROPS_CONTAINER))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .interStageInputAnnotations(
               ImmutableList.of(
                   FromPrepare.class,
                   FromMeasure.class,
                   FromMeasureBaseline.class,
-                  FromBoundsDefined.class,
-                  FromBind.class))
+                  FromBoundsDefined.class))
           .extraMethods(
               ImmutableList.of(
                   MethodSpec.methodBuilder("implementsAccessibility")
+                      .addAnnotation(Override.class)
+                      .addModifiers(Modifier.PUBLIC)
+                      .returns(TypeName.BOOLEAN)
+                      .addStatement("return true")
+                      .build()))
+          .build();
+
+  public static final DelegateMethodDescription ON_VIRTUAL_VIEW_KEYBOARD_FOCUS_CHANGED =
+      DelegateMethodDescription.newBuilder()
+          .annotations(ImmutableList.of(AnnotationSpec.builder(Override.class).build()))
+          .accessType(Modifier.PROTECTED)
+          .returnType(TypeName.VOID)
+          .name("onVirtualViewKeyboardFocusChanged")
+          .lifecycleMethodArguments(
+              ImmutableList.of(
+                  LifecycleMethodArgumentType.COMPONENT_CONTEXT,
+                  LifecycleMethodArgumentType.VIEW,
+                  LifecycleMethodArgumentType.ACCESSIBILITY_NODE,
+                  LifecycleMethodArgumentType.INT,
+                  LifecycleMethodArgumentType.BOOLEAN,
+                  LifecycleMethodArgumentType.INTER_STAGE_PROPS_CONTAINER))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
+          .interStageInputAnnotations(
+              ImmutableList.of(
+                  FromPrepare.class,
+                  FromMeasure.class,
+                  FromMeasureBaseline.class,
+                  FromBoundsDefined.class))
+          .extraMethods(
+              ImmutableList.of(
+                  MethodSpec.methodBuilder("implementsKeyboardFocusChangeForVirtualViews")
                       .addAnnotation(Override.class)
                       .addModifiers(Modifier.PUBLIC)
                       .returns(TypeName.BOOLEAN)
@@ -386,16 +453,19 @@ public final class DelegateMethodDescriptions {
           .name("onPopulateExtraAccessibilityNode")
           .definedParameterTypes(
               ImmutableList.of(
-                  ClassNames.ACCESSIBILITY_NODE, TypeName.INT, TypeName.INT, TypeName.INT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+                  ClassNames.COMPONENT_CONTEXT,
+                  ClassNames.ACCESSIBILITY_NODE,
+                  TypeName.INT,
+                  TypeName.INT,
+                  TypeName.INT,
+                  ClassNames.INTER_STAGE_PROPS_CONTAINER))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .interStageInputAnnotations(
               ImmutableList.of(
                   FromPrepare.class,
                   FromMeasure.class,
                   FromMeasureBaseline.class,
-                  FromBoundsDefined.class,
-                  FromBind.class))
+                  FromBoundsDefined.class))
           .extraMethods(
               ImmutableList.of(
                   MethodSpec.methodBuilder("implementsExtraAccessibilityNodes")
@@ -412,16 +482,19 @@ public final class DelegateMethodDescriptions {
           .accessType(Modifier.PROTECTED)
           .returnType(TypeName.INT)
           .name("getExtraAccessibilityNodeAt")
-          .definedParameterTypes(ImmutableList.of(TypeName.INT, TypeName.INT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .lifecycleMethodArguments(
+              ImmutableList.of(
+                  LifecycleMethodArgumentType.COMPONENT_CONTEXT,
+                  LifecycleMethodArgumentType.INT,
+                  LifecycleMethodArgumentType.INT,
+                  LifecycleMethodArgumentType.INTER_STAGE_PROPS_CONTAINER))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .interStageInputAnnotations(
               ImmutableList.of(
                   FromPrepare.class,
                   FromMeasure.class,
                   FromMeasureBaseline.class,
-                  FromBoundsDefined.class,
-                  FromBind.class))
+                  FromBoundsDefined.class))
           .build();
 
   public static final DelegateMethodDescription GET_EXTRA_ACCESSIBILITY_NODES_COUNT =
@@ -430,16 +503,17 @@ public final class DelegateMethodDescriptions {
           .accessType(Modifier.PROTECTED)
           .returnType(TypeName.INT)
           .name("getExtraAccessibilityNodesCount")
-          .definedParameterTypes(ImmutableList.<TypeName>of())
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .lifecycleMethodArguments(
+              ImmutableList.of(
+                  LifecycleMethodArgumentType.COMPONENT_CONTEXT,
+                  LifecycleMethodArgumentType.INTER_STAGE_PROPS_CONTAINER))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .interStageInputAnnotations(
               ImmutableList.of(
                   FromPrepare.class,
                   FromMeasure.class,
                   FromMeasureBaseline.class,
-                  FromBoundsDefined.class,
-                  FromBind.class))
+                  FromBoundsDefined.class))
           .build();
 
   public static final DelegateMethodDescription SHOULD_ALWAYS_REMEASURE =
@@ -449,8 +523,17 @@ public final class DelegateMethodDescriptions {
           .returnType(TypeName.BOOLEAN)
           .name("shouldAlwaysRemeasure")
           .definedParameterTypes(ImmutableList.of())
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
+          .build();
+
+  public static final DelegateMethodDescription SHOULD_EXCLUDE_FROM_INCREMENTAL_MOUNT =
+      DelegateMethodDescription.newBuilder()
+          .annotations(ImmutableList.of(AnnotationSpec.builder(Override.class).build()))
+          .accessType(Modifier.PROTECTED)
+          .returnType(TypeName.BOOLEAN)
+          .name("excludeFromIncrementalMount")
+          .definedParameterTypes(ImmutableList.of())
+          .optionalParameterTypes(ImmutableList.of(PROP))
           .build();
 
   public static final DelegateMethodDescription ON_ATTACHED =
@@ -460,8 +543,7 @@ public final class DelegateMethodDescriptions {
           .returnType(TypeName.VOID)
           .name("onAttached")
           .definedParameterTypes(ImmutableList.<TypeName>of(ClassNames.COMPONENT_CONTEXT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .build();
 
   public static final DelegateMethodDescription ON_DETACHED =
@@ -471,8 +553,7 @@ public final class DelegateMethodDescriptions {
           .returnType(TypeName.VOID)
           .name("onDetached")
           .definedParameterTypes(ImmutableList.<TypeName>of(ClassNames.COMPONENT_CONTEXT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .build();
 
   public static final Map<Class<? extends Annotation>, DelegateMethodDescription>
@@ -498,24 +579,21 @@ public final class DelegateMethodDescriptions {
     layoutSpecDelegateMethodsMap.put(OnCreateLayout.class, ON_CREATE_LAYOUT);
     layoutSpecDelegateMethodsMap.put(
         OnCreateLayoutWithSizeSpec.class, ON_CREATE_LAYOUT_WITH_SIZE_SPEC);
-    layoutSpecDelegateMethodsMap.put(
-        OnShouldCreateLayoutWithNewSizeSpec.class, ON_SHOULD_CREATE_LAYOUT_WITH_NEW_SIZE_SPEC);
     layoutSpecDelegateMethodsMap.put(OnCreateInitialState.class, ON_CREATE_INITIAL_STATE);
-    layoutSpecDelegateMethodsMap.put(
-        OnCreateTransition.class, ON_CREATE_TRANSITION);
+    layoutSpecDelegateMethodsMap.put(OnCreateTransition.class, ON_CREATE_TRANSITION);
     layoutSpecDelegateMethodsMap.put(ShouldUpdate.class, SHOULD_UPDATE);
     layoutSpecDelegateMethodsMap.put(OnAttached.class, ON_ATTACHED);
     layoutSpecDelegateMethodsMap.put(OnDetached.class, ON_DETACHED);
     LAYOUT_SPEC_DELEGATE_METHODS_MAP = Collections.unmodifiableMap(layoutSpecDelegateMethodsMap);
 
     Map<Class<? extends Annotation>, DelegateMethodDescription> mountSpecDelegateMethodsMap =
-        new TreeMap<>(new Comparator<Class<? extends Annotation>>() {
-          @Override
-          public int compare(
-              Class<? extends Annotation> lhs, Class<? extends Annotation> rhs) {
-            return lhs.toString().compareTo(rhs.toString());
-          }
-        });
+        new TreeMap<>(
+            new Comparator<Class<? extends Annotation>>() {
+              @Override
+              public int compare(Class<? extends Annotation> lhs, Class<? extends Annotation> rhs) {
+                return lhs.toString().compareTo(rhs.toString());
+              }
+            });
     mountSpecDelegateMethodsMap.put(OnCreateInitialState.class, ON_CREATE_INITIAL_STATE);
     mountSpecDelegateMethodsMap.put(OnLoadStyle.class, ON_LOAD_STYLE);
     mountSpecDelegateMethodsMap.put(OnError.class, ON_ERROR);
@@ -531,6 +609,10 @@ public final class DelegateMethodDescriptions {
     mountSpecDelegateMethodsMap.put(OnUnmount.class, ON_UNMOUNT);
     mountSpecDelegateMethodsMap.put(ShouldUpdate.class, SHOULD_UPDATE);
     mountSpecDelegateMethodsMap.put(
+        OnPerformActionForVirtualView.class, ON_PERFORM_ACTION_FOR_VIRTUAL_VIEW);
+    mountSpecDelegateMethodsMap.put(
+        OnVirtualViewKeyboardFocusChanged.class, ON_VIRTUAL_VIEW_KEYBOARD_FOCUS_CHANGED);
+    mountSpecDelegateMethodsMap.put(
         OnPopulateAccessibilityNode.class, ON_POPULATE_ACCESSIBILITY_NODE);
     mountSpecDelegateMethodsMap.put(
         OnPopulateExtraAccessibilityNode.class, ON_POPULATE_EXTRA_ACCESSIBILITY_NODE);
@@ -539,24 +621,24 @@ public final class DelegateMethodDescriptions {
     mountSpecDelegateMethodsMap.put(
         GetExtraAccessibilityNodesCount.class, GET_EXTRA_ACCESSIBILITY_NODES_COUNT);
     mountSpecDelegateMethodsMap.put(ShouldAlwaysRemeasure.class, SHOULD_ALWAYS_REMEASURE);
+    mountSpecDelegateMethodsMap.put(
+        ShouldExcludeFromIncrementalMount.class, SHOULD_EXCLUDE_FROM_INCREMENTAL_MOUNT);
     mountSpecDelegateMethodsMap.put(OnAttached.class, ON_ATTACHED);
     mountSpecDelegateMethodsMap.put(OnDetached.class, ON_DETACHED);
     MOUNT_SPEC_DELEGATE_METHODS_MAP = Collections.unmodifiableMap(mountSpecDelegateMethodsMap);
 
     Map<Class<? extends Annotation>, Class<? extends Annotation>> interStageInputsMap =
-        new TreeMap<>(new Comparator<Class<? extends Annotation>>() {
-          @Override
-          public int compare(
-              Class<? extends Annotation> lhs, Class<? extends Annotation> rhs) {
-            return lhs.toString().compareTo(rhs.toString());
-          }
-        });
-    interStageInputsMap.put(FromPreviousCreateLayout.class, OnCreateLayoutWithSizeSpec.class);
+        new TreeMap<>(
+            new Comparator<Class<? extends Annotation>>() {
+              @Override
+              public int compare(Class<? extends Annotation> lhs, Class<? extends Annotation> rhs) {
+                return lhs.toString().compareTo(rhs.toString());
+              }
+            });
     interStageInputsMap.put(FromPrepare.class, OnPrepare.class);
     interStageInputsMap.put(FromMeasure.class, OnMeasure.class);
     interStageInputsMap.put(FromMeasureBaseline.class, OnMeasureBaseline.class);
     interStageInputsMap.put(FromBoundsDefined.class, OnBoundsDefined.class);
-    interStageInputsMap.put(FromBind.class, OnBind.class);
     INTER_STAGE_INPUTS_MAP = Collections.unmodifiableMap(interStageInputsMap);
   }
 }

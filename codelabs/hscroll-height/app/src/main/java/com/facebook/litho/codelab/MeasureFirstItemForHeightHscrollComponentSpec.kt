@@ -1,11 +1,11 @@
 /*
- * Copyright 2019-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.facebook.litho.codelab
 
 import androidx.recyclerview.widget.OrientationHelper
-
 import com.facebook.litho.Component
 import com.facebook.litho.ComponentContext
 import com.facebook.litho.annotations.FromEvent
@@ -28,14 +28,17 @@ import com.facebook.litho.sections.SectionContext
 import com.facebook.litho.sections.common.DataDiffSection
 import com.facebook.litho.sections.common.RenderEvent
 import com.facebook.litho.sections.widget.ListRecyclerConfiguration
+import com.facebook.litho.sections.widget.RecyclerBinderConfiguration
 import com.facebook.litho.sections.widget.RecyclerCollectionComponent
 import com.facebook.litho.widget.ComponentRenderInfo
+import com.facebook.litho.widget.RecyclerBinderConfig
 import com.facebook.litho.widget.RenderInfo
 import com.facebook.litho.widget.SolidColor
+import com.facebook.litho.widget.collection.CrossAxisWrapMode
 
 /**
- * Renders a horizontal list who gets its height by measuring the first item in the list.
- * This option is enabled by enabling the `canMeasureRecycler` prop on the
+ * Renders a horizontal list who gets its height by measuring the first item in the list. This
+ * option is enabled by enabling the `CrossAxisWrapMode.MatchFirstChild` prop on the
  * RecyclerCollectionComponent.
  */
 @LayoutSpec
@@ -48,13 +51,18 @@ object MeasureFirstItemForHeightHscrollComponentSpec {
         .recyclerConfiguration(
             ListRecyclerConfiguration.create()
                 .orientation(OrientationHelper.HORIZONTAL)
+                .recyclerBinderConfiguration(
+                    RecyclerBinderConfiguration.create()
+                        .recyclerBinderConfig(
+                            RecyclerBinderConfig(
+                                crossAxisWrapMode = CrossAxisWrapMode.MatchFirstChild))
+                        .build())
                 .build())
         .section(
             DataDiffSection.create<Int>(SectionContext(c))
                 .data(colors)
                 .renderEventHandler(MeasureFirstItemForHeightHscrollComponent.onRender(c))
                 .build())
-        .canMeasureRecycler(true)
         .build()
   }
 
@@ -68,7 +76,7 @@ object MeasureFirstItemForHeightHscrollComponentSpec {
 
     if (index == 1) {
       return ComponentRenderInfo.create()
-      component(SolidColor.create(c).color(model).heightDip(200f).widthDip(100f))
+          .component(SolidColor.create(c).color(model).heightDip(200f).widthDip(100f))
           .build()
     }
 

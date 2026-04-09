@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,9 +28,7 @@ import java.util.HashSet;
 import java.util.Set;
 import javax.annotation.Nullable;
 
-/**
- * Test support class to easily create static Section hierarchies.
- */
+/** Test support class to easily create static Section hierarchies. */
 public class TestSectionCreator {
 
   public static Section createChangeSetSection(
@@ -38,11 +36,7 @@ public class TestSectionCreator {
       String key,
       final boolean forceShouldUpdate,
       @Nullable final Change... changes) {
-    return new ChangeSetSection(
-        initialCount,
-        key,
-        forceShouldUpdate,
-        changes);
+    return new ChangeSetSection(initialCount, key, forceShouldUpdate, changes);
   }
 
   public static ChildrenSectionTest createSectionComponent(
@@ -55,16 +49,12 @@ public class TestSectionCreator {
     return new ChildrenSectionTest(0, key, forceShouldUpdate, children);
   }
 
-  public static Section createChangeSetComponent(
-      String key,
-      @Nullable final Change... changes) {
+  public static Section createChangeSetComponent(String key, @Nullable final Change... changes) {
     return createChangeSetSection(0, key, false, changes);
   }
 
   public static Section createChangeSetComponent(
-      String key,
-      boolean forceShouldUpdate,
-      @Nullable final Change... changes) {
+      String key, boolean forceShouldUpdate, @Nullable final Change... changes) {
     return createChangeSetSection(0, key, forceShouldUpdate, changes);
   }
 
@@ -73,7 +63,7 @@ public class TestSectionCreator {
    *     Section}s as children.
    */
   public static class ChildrenSectionTest extends TestSection {
-    private final Section[] mChildren;
+    @Nullable private final Section[] mChildren;
     public boolean onDataRendered = false;
     public ChangesInfo mChangesInfo;
 
@@ -125,18 +115,19 @@ public class TestSectionCreator {
         long uptimeMillis,
         int firstVisibleIndex,
         int lastVisibleIndex,
-        ChangesInfo changesInfo) {
+        ChangesInfo changesInfo,
+        int globalOffset) {
       onDataRendered = true;
       mChangesInfo = changesInfo;
     }
   }
 
   /**
-   * @return a Lifecycle for a ChangeSetSpec Section that statically populates the
-   * {@link ChangeSet} with a list of {@link Change}s.
+   * @return a Lifecycle for a ChangeSetSpec Section that statically populates the {@link ChangeSet}
+   *     with a list of {@link Change}s.
    */
   private static class ChangeSetSection extends TestSection {
-    private final Change[] mChanges;
+    @Nullable private final Change[] mChanges;
 
     ChangeSetSection(
         int initialCount,
@@ -149,7 +140,12 @@ public class TestSectionCreator {
 
     @Override
     protected void generateChangeSet(
-        SectionContext c, ChangeSet changeSet, Section previous, Section next) {
+        SectionContext c,
+        ChangeSet changeSet,
+        SectionContext previousScopedContext,
+        Section previous,
+        SectionContext nextScopedContext,
+        Section next) {
       if (mChanges != null) {
         for (int i = 0, size = mChanges.length; i < size; i++) {
           changeSet.addChange(mChanges[i]);
@@ -212,13 +208,12 @@ public class TestSectionCreator {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
       if (forceShouldUpdate) {
         return false;
       }
 
-      return o.getClass().equals(getClass())
-          && ((Section) o).getGlobalKey().equals(getGlobalKey());
+      return o.getClass().equals(getClass()) && ((Section) o).getGlobalKey().equals(getGlobalKey());
     }
 
     @Override

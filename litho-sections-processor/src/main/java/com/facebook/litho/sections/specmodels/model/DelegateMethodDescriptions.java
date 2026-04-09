@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,6 @@ package com.facebook.litho.sections.specmodels.model;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.CACHED_VALUE;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.DIFF_PROP;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.DIFF_STATE;
-import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.INJECT_PROP;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.PROP;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.STATE;
 import static com.facebook.litho.specmodels.model.DelegateMethodDescription.OptionalParameterType.STATE_VALUE;
@@ -35,6 +34,7 @@ import com.facebook.litho.sections.annotations.OnDataRendered;
 import com.facebook.litho.sections.annotations.OnDiff;
 import com.facebook.litho.sections.annotations.OnRefresh;
 import com.facebook.litho.sections.annotations.OnUnbindService;
+import com.facebook.litho.sections.annotations.OnVerifyChangeSet;
 import com.facebook.litho.sections.annotations.OnViewportChanged;
 import com.facebook.litho.specmodels.internal.ImmutableList;
 import com.facebook.litho.specmodels.model.DelegateMethodDescription;
@@ -60,8 +60,7 @@ public class DelegateMethodDescriptions {
           .returnType(SectionClassNames.CHILDREN)
           .name("createChildren")
           .definedParameterTypes(ImmutableList.<TypeName>of(SectionClassNames.SECTION_CONTEXT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .build();
 
   private static final DelegateMethodDescription ON_CREATE_INITIAL_STATE =
@@ -71,7 +70,8 @@ public class DelegateMethodDescriptions {
           .returnType(TypeName.VOID)
           .name("createInitialState")
           .definedParameterTypes(ImmutableList.<TypeName>of(SectionClassNames.SECTION_CONTEXT))
-          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE_VALUE, INJECT_PROP))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE_VALUE))
+          .createsLegacyState(true)
           .build();
 
   private static final DelegateMethodDescription ON_REFRESH =
@@ -81,8 +81,7 @@ public class DelegateMethodDescriptions {
           .returnType(TypeName.VOID)
           .name("refresh")
           .definedParameterTypes(ImmutableList.<TypeName>of(SectionClassNames.SECTION_CONTEXT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .build();
 
   private static final DelegateMethodDescription ON_DATA_BOUND =
@@ -92,8 +91,7 @@ public class DelegateMethodDescriptions {
           .returnType(TypeName.VOID)
           .name("dataBound")
           .definedParameterTypes(ImmutableList.<TypeName>of(SectionClassNames.SECTION_CONTEXT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .build();
 
   private static final DelegateMethodDescription ON_DATA_RENDERED =
@@ -110,9 +108,9 @@ public class DelegateMethodDescriptions {
                   TypeName.LONG,
                   TypeName.INT,
                   TypeName.INT,
-                  SectionClassNames.CHANGE_CHANGES_INFO))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+                  SectionClassNames.CHANGE_CHANGES_INFO,
+                  TypeName.INT))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .build();
 
   private static final DelegateMethodDescription ON_VIEWPORT_CHANGED =
@@ -129,8 +127,7 @@ public class DelegateMethodDescriptions {
                   TypeName.INT,
                   TypeName.INT,
                   TypeName.INT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .build();
 
   private static final DelegateMethodDescription ON_CREATE_SERVICE =
@@ -139,8 +136,7 @@ public class DelegateMethodDescriptions {
           .returnType(TypeName.OBJECT)
           .name("onCreateService")
           .definedParameterTypes(ImmutableList.<TypeName>of(SectionClassNames.SECTION_CONTEXT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .build();
 
   private static final DelegateMethodDescription ON_BIND_SERVICE =
@@ -150,8 +146,7 @@ public class DelegateMethodDescriptions {
           .returnType(TypeName.VOID)
           .name("bindService")
           .definedParameterTypes(ImmutableList.<TypeName>of(SectionClassNames.SECTION_CONTEXT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .build();
 
   private static final DelegateMethodDescription ON_UNBIND_SERVICE =
@@ -161,8 +156,7 @@ public class DelegateMethodDescriptions {
           .returnType(TypeName.VOID)
           .name("unbindService")
           .definedParameterTypes(ImmutableList.<TypeName>of(SectionClassNames.SECTION_CONTEXT))
-          .optionalParameterTypes(
-              ImmutableList.of(PROP, TREE_PROP, STATE, INJECT_PROP, CACHED_VALUE))
+          .optionalParameterTypes(ImmutableList.of(PROP, TREE_PROP, STATE, CACHED_VALUE))
           .build();
 
   private static final DelegateMethodDescription ON_DIFF =
@@ -185,6 +179,16 @@ public class DelegateMethodDescriptions {
                       .build()))
           .build();
 
+  private static final DelegateMethodDescription ON_VERIFY_CHANGE_SET =
+      DelegateMethodDescription.newBuilder()
+          .annotations(ImmutableList.of(AnnotationSpec.builder(Override.class).build()))
+          .accessType(Modifier.PROTECTED)
+          .returnType(SectionClassNames.STRING)
+          .name("verifyChangeSet")
+          .definedParameterTypes(ImmutableList.<TypeName>of(SectionClassNames.SECTION_CONTEXT))
+          .optionalParameterTypes(ImmutableList.of(PROP))
+          .build();
+
   private static final DelegateMethodDescription SHOULD_UPDATE =
       DelegateMethodDescription.newBuilder()
           .annotations(ImmutableList.of(AnnotationSpec.builder(Override.class).build()))
@@ -201,6 +205,7 @@ public class DelegateMethodDescriptions {
       GROUP_SECTION_SPEC_DELEGATE_METHODS_MAP;
   static final Map<Class<? extends Annotation>, DelegateMethodDescription>
       DIFF_SECTION_SPEC_DELEGATE_METHODS_MAP;
+
   static {
     Map<Class<? extends Annotation>, DelegateMethodDescription> serviceAwareDelegateMethodsMap =
         getTreeMap();
@@ -230,6 +235,7 @@ public class DelegateMethodDescriptions {
 
     diffSectionSpecDelegateMethodsMap.put(OnCreateInitialState.class, ON_CREATE_INITIAL_STATE);
     diffSectionSpecDelegateMethodsMap.put(OnDiff.class, ON_DIFF);
+    diffSectionSpecDelegateMethodsMap.put(OnVerifyChangeSet.class, ON_VERIFY_CHANGE_SET);
     diffSectionSpecDelegateMethodsMap.put(ShouldUpdate.class, SHOULD_UPDATE);
 
     DIFF_SECTION_SPEC_DELEGATE_METHODS_MAP =
@@ -237,7 +243,7 @@ public class DelegateMethodDescriptions {
   }
 
   public static Map<Class<? extends Annotation>, DelegateMethodDescription>
-  getGroupSectionSpecDelegatesMap(GroupSectionSpecModel specModel) {
+      getGroupSectionSpecDelegatesMap(GroupSectionSpecModel specModel) {
     Map<Class<? extends Annotation>, DelegateMethodDescription> groupSectionSpecDelegateMethodsMap =
         getTreeMap();
 
@@ -248,7 +254,7 @@ public class DelegateMethodDescriptions {
   }
 
   public static Map<Class<? extends Annotation>, DelegateMethodDescription>
-  getDiffSectionSpecDelegatesMap(DiffSectionSpecModel specModel) {
+      getDiffSectionSpecDelegatesMap(DiffSectionSpecModel specModel) {
     Map<Class<? extends Annotation>, DelegateMethodDescription> diffSectionSpecDelegateMethodsMap =
         getTreeMap();
 
@@ -310,8 +316,7 @@ public class DelegateMethodDescriptions {
         .addAnnotation(Override.class)
         .addModifiers(Modifier.PUBLIC)
         .addParameter(ParameterSpec.builder(SectionClassNames.SECTION_CONTEXT, "context").build())
-        .addStatement(
-            "$L = onCreateService(context)", serviceInstanceName)
+        .addStatement("$L = onCreateService(context)", serviceInstanceName)
         .build();
   }
 

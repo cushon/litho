@@ -3,10 +3,31 @@ apply plugin: 'com.android.library'
 android {
     compileSdkVersion rootProject.compileSdkVersion
     buildToolsVersion rootProject.buildToolsVersion
+    namespace 'com.facebook.yoga'
+
+    ndkVersion '26.1.10909125'
 
     defaultConfig {
         minSdkVersion rootProject.minSdkVersion
         targetSdkVersion rootProject.targetSdkVersion
+        consumerProguardFiles 'proguard-rules.pro'
+
+        ndk {
+            abiFilters 'x86', 'x86_64', 'armeabi-v7a', 'arm64-v8a'
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_TOOLCHAIN=clang'
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'src/main/cpp/CMakeLists.txt'
+            version '3.18.1'
+        }
     }
 }
 
@@ -15,7 +36,6 @@ dependencies {
     implementation deps.jsr305
     implementation deps.inferAnnotations
     implementation project(':litho-annotations')
-    implementation project(':fbjni')
 }
 
 // Our current NDK setup only gets us half-way there to a way to run Yoga
@@ -23,6 +43,12 @@ dependencies {
 // someone (maybe you!) will fix this and get CMake to help us out.
 task buckBuild(type: Exec) {
     workingDir rootDir
-    environment BUCKVERSION: 'last'
-    commandLine 'buck', 'build', '//lib/yogajni:jni#default,shared'
+    environment BUCKVERSION: System.getenv('BUCKVERSION') ?: 'last'
+    def buckPath = System.getenv('BUCK_PATH')
+    commandLine buckPath, 'build', '//lib/yogajni:jni#default,shared'
+    doLast {
+        System.out.println("[Yoga Buck Build]: exit value: ${executionResult.get().exitValue}")
+        def build_outputs = 'find buck-out/gen/lib/yogajni/jni#default,shared/'.execute().text.trim()
+        System.out.println("[Yoga Buck Build]: build outputs:\n${build_outputs}")
+    }
 }

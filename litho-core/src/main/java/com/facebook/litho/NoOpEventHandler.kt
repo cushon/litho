@@ -1,0 +1,47 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.facebook.litho
+
+import androidx.annotation.VisibleForTesting
+import com.facebook.litho.annotations.EventHandlerRebindMode
+import kotlin.jvm.JvmField
+
+class NoOpEventHandler<E> :
+    EventHandler<E>(
+        ID,
+        EventHandlerRebindMode.NONE,
+        EventDispatchInfo(NoOpHasEventDispatcher(), null),
+        null,
+    ) {
+
+  private class NoOpHasEventDispatcher : HasEventDispatcher {
+    override fun getEventDispatcher(): EventDispatcher = EventDispatcher { _, _ ->
+      /* DO NOTHING HERE
+      The exception should be thrown when the handler is create, much before any events  get dispatched. */
+      null
+    }
+  }
+
+  companion object {
+    private const val ID = -1
+
+    @JvmField @VisibleForTesting val instance: NoOpEventHandler<*> = NoOpEventHandler<Any?>()
+
+    @JvmStatic
+    fun <E> getNoOpEventHandler(): NoOpEventHandler<E> = (instance as NoOpEventHandler<E>)
+  }
+}

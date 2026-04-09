@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,11 +26,12 @@ import com.facebook.litho.BaseMatcher;
 import com.facebook.litho.BaseMatcherBuilder;
 import com.facebook.litho.Component;
 import com.facebook.litho.ComponentContext;
-import com.facebook.litho.ResourceResolver;
+import com.facebook.litho.annotations.Generated;
 import com.facebook.litho.testing.subcomponents.InspectableComponent;
+import com.facebook.rendercore.ResourceResolver;
 import javax.annotation.Nullable;
+import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Condition;
-import org.assertj.core.api.Java6Assertions;
 import org.assertj.core.description.TextDescription;
 
 /**
@@ -40,11 +41,13 @@ import org.assertj.core.description.TextDescription;
  * @prop-required myStringProp java.lang.String
  * @see com.facebook.litho.processor.integration.resources.BasicTestSampleSpec
  */
+@Generated
 public final class BasicTestSample implements BasicTestSampleSpec {
   public static Matcher matcher(ComponentContext c) {
     return new Matcher(c);
   }
 
+  @Generated
   public static class Matcher extends BaseMatcher<Matcher> {
     protected ResourceResolver mResourceResolver;
 
@@ -54,13 +57,12 @@ public final class BasicTestSample implements BasicTestSampleSpec {
 
     @Nullable org.hamcrest.Matcher<Float> mMyDimenSizePropMatcher;
 
-    @Nullable
-    org.hamcrest.Matcher<Integer> mMyRequiredColorPropMatcher;
+    @Nullable org.hamcrest.Matcher<Integer> mMyRequiredColorPropMatcher;
 
     @Nullable org.hamcrest.Matcher<String> mMyStringPropMatcher;
 
     Matcher(ComponentContext c) {
-      mResourceResolver = new ResourceResolver(c);
+      mResourceResolver = c.getResourceResolver();
     }
 
     public Matcher child(Condition<InspectableComponent> matcher) {
@@ -167,7 +169,8 @@ public final class BasicTestSample implements BasicTestSampleSpec {
                       com.facebook.litho.processor.integration.resources.BasicLayout.class)) {
                 as(
                     new TextDescription(
-                        "Sub-component of type \"com.facebook.litho.processor.integration.resources.BasicLayout\""));
+                        "Sub-component of type"
+                            + " \"com.facebook.litho.processor.integration.resources.BasicLayout\""));
                 return false;
               }
               final com.facebook.litho.processor.integration.resources.BasicLayout impl =
@@ -184,7 +187,8 @@ public final class BasicTestSample implements BasicTestSampleSpec {
               if (mChildMatcher != null && !mChildMatcher.matches(propValueChild)) {
                 as(
                     new TextDescription(
-                        "Sub-component of type <BasicLayout> with prop <child> %s (doesn't match %s)",
+                        "Sub-component of type <BasicLayout> with prop <child> %s (doesn't match"
+                            + " %s)",
                         mChildMatcher, propValueChild));
                 return false;
               }
@@ -193,7 +197,8 @@ public final class BasicTestSample implements BasicTestSampleSpec {
                   && !mMyDimenSizePropMatcher.matches(propValueMyDimenSizeProp)) {
                 as(
                     new TextDescription(
-                        "Sub-component of type <BasicLayout> with prop <myDimenSizeProp> %s (doesn't match %s)",
+                        "Sub-component of type <BasicLayout> with prop <myDimenSizeProp> %s"
+                            + " (doesn't match %s)",
                         mMyDimenSizePropMatcher, propValueMyDimenSizeProp));
                 return false;
               }
@@ -202,7 +207,8 @@ public final class BasicTestSample implements BasicTestSampleSpec {
                   && !mMyRequiredColorPropMatcher.matches(propValueMyRequiredColorProp)) {
                 as(
                     new TextDescription(
-                        "Sub-component of type <BasicLayout> with prop <myRequiredColorProp> %s (doesn't match %s)",
+                        "Sub-component of type <BasicLayout> with prop <myRequiredColorProp> %s"
+                            + " (doesn't match %s)",
                         mMyRequiredColorPropMatcher, propValueMyRequiredColorProp));
                 return false;
               }
@@ -211,14 +217,15 @@ public final class BasicTestSample implements BasicTestSampleSpec {
                   && !mMyStringPropMatcher.matches(propValueMyStringProp)) {
                 as(
                     new TextDescription(
-                        "Sub-component of type <BasicLayout> with prop <myStringProp> %s (doesn't match %s)",
+                        "Sub-component of type <BasicLayout> with prop <myStringProp> %s (doesn't"
+                            + " match %s)",
                         mMyStringPropMatcher, propValueMyStringProp));
                 return false;
               }
               return true;
             }
           };
-      return Java6Assertions.allOf(mainBuilder, BaseMatcherBuilder.buildCommonMatcher(this));
+      return Assertions.allOf(mainBuilder, BaseMatcherBuilder.buildCommonMatcher(this));
     }
 
     @Override

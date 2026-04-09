@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,20 +16,19 @@
 
 package com.facebook.litho.specmodels.processor;
 
-import static com.facebook.litho.specmodels.processor.ProcessorUtils.getPackageName;
 import static com.facebook.litho.specmodels.processor.ProcessorUtils.validate;
 
+import com.facebook.annotationprocessors.common.ProcessorBase;
 import com.facebook.litho.specmodels.internal.RunMode;
-import com.facebook.litho.specmodels.model.DependencyInjectionHelperFactory;
 import com.facebook.litho.specmodels.model.SpecModel;
 import com.squareup.javapoet.JavaFile;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.annotation.Nullable;
-import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedSourceVersion;
@@ -39,9 +38,8 @@ import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
 
 @SupportedSourceVersion(SourceVersion.RELEASE_7)
-public abstract class AbstractComponentsProcessor extends AbstractProcessor {
+public abstract class AbstractComponentsProcessor extends ProcessorBase {
 
-  @Nullable private final DependencyInjectionHelperFactory mDependencyInjectionHelperFactory;
   private final List<SpecModelFactory> mSpecModelFactories;
   private final boolean mShouldSavePropNames;
   private PropNameInterStageStore mPropNameInterStageStore;
@@ -55,24 +53,14 @@ public abstract class AbstractComponentsProcessor extends AbstractProcessor {
         }
       };
 
-  protected AbstractComponentsProcessor(
-      List<SpecModelFactory> specModelFactories,
-      DependencyInjectionHelperFactory dependencyInjectionHelperFactory) {
-    this(specModelFactories, dependencyInjectionHelperFactory, true);
+  protected AbstractComponentsProcessor(List<SpecModelFactory> specModelFactories) {
+    this(specModelFactories, true);
   }
 
   protected AbstractComponentsProcessor(
-      List<SpecModelFactory> specModelFactories,
-      DependencyInjectionHelperFactory dependencyInjectionHelperFactory,
-      boolean shouldSavePropNames) {
+      List<SpecModelFactory> specModelFactories, boolean shouldSavePropNames) {
     mSpecModelFactories = specModelFactories;
-    mDependencyInjectionHelperFactory = dependencyInjectionHelperFactory;
     mShouldSavePropNames = shouldSavePropNames;
-  }
-
-  /** Use this to force hotswap mode to be turned on. */
-  public void forceHotswapMode() {
-    mRunMode.add(RunMode.HOTSWAP);
   }
 
   @Override
@@ -80,21 +68,21 @@ public abstract class AbstractComponentsProcessor extends AbstractProcessor {
     super.init(processingEnv);
 
     Map<String, String> options = processingEnv.getOptions();
-    boolean isGeneratingAbi =
+    boolean isGeneratingJavaAbi =
         Boolean.valueOf(options.getOrDefault("com.facebook.buck.java.generating_abi", "false"));
+    boolean isGeneratingKotlinAbi =
+        Boolean.valueOf(options.getOrDefault("com.facebook.buck.kotlin.generating_abi", "false"));
+    boolean isGeneratingAbi = isGeneratingJavaAbi || isGeneratingKotlinAbi;
     if (isGeneratingAbi) {
       mRunMode.add(RunMode.ABI);
     }
-
-    boolean generateBuckHotswapCode =
-        Boolean.valueOf(options.getOrDefault("com.facebook.litho.hotswap", "false"));
-    if (generateBuckHotswapCode) {
-      mRunMode.add(RunMode.HOTSWAP);
+    if (Boolean.parseBoolean(options.getOrDefault("com.facebook.litho.testing", "false"))) {
+      mRunMode.add(RunMode.TESTING);
     }
   }
 
   @Override
-  public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+  public boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     if (roundEnv.processingOver()) {
       return false;
     }
@@ -113,9 +101,6 @@ public abstract class AbstractComponentsProcessor extends AbstractProcessor {
                   (TypeElement) element,
                   processingEnv.getMessager(),
                   mRunMode,
-                  mDependencyInjectionHelperFactory == null
-                      ? null
-                      : mDependencyInjectionHelperFactory.create((TypeElement) element, mRunMode),
                   mInterStageStore);
 
           validate(specModel, mRunMode);
@@ -124,6 +109,8 @@ public abstract class AbstractComponentsProcessor extends AbstractProcessor {
         } catch (PrintableException e) {
           e.print(processingEnv.getMessager());
         } catch (Exception e) {
+          final StringWriter stackWriter = new StringWriter();
+          e.printStackTrace(new PrintWriter(stackWriter));
           processingEnv
               .getMessager()
               .printMessage(
@@ -131,9 +118,8 @@ public abstract class AbstractComponentsProcessor extends AbstractProcessor {
                   String.format(
                       "Unexpected error thrown when generating this component spec. "
                           + "Please report stack trace to the components team.\n%s",
-                      e),
+                      stackWriter.toString()),
                   element);
-          e.printStackTrace();
         }
       }
     }
@@ -142,7 +128,9 @@ public abstract class AbstractComponentsProcessor extends AbstractProcessor {
   }
 
   protected void generate(SpecModel specModel, EnumSet<RunMode> runMode) throws IOException {
-    final String packageName = getPackageName(specModel.getComponentTypeName());
+    final String packageName =
+        com.facebook.litho.specmodels.processor.ProcessorUtils.getPackageName(
+            specModel.getComponentTypeName());
     JavaFile.builder(packageName, specModel.generate(runMode))
         .skipJavaLangImports(true)
         .build()

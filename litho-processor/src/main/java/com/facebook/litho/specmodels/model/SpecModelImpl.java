@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -45,6 +45,7 @@ public final class SpecModelImpl implements SpecModel {
   private final String mComponentName;
   private final TypeName mComponentTypeName;
   private final ClassName mComponentClass;
+  private final ClassName mContextClassName;
   private final SpecElementType mSpecElementType;
   private final ImmutableList<SpecMethodModel<DelegateMethod, Void>> mDelegateMethods;
   private final ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> mEventMethods;
@@ -56,13 +57,12 @@ public final class SpecModelImpl implements SpecModel {
       mUpdateStateWithTransitionMethods;
   private final ImmutableList<PropModel> mRawProps;
   private final ImmutableList<PropModel> mProps;
-  private final ImmutableList<InjectPropModel> mInjectProps;
-  private final ImmutableList<InjectPropModel> mRawInjectProps;
   private final ImmutableList<PropDefaultModel> mPropDefaults;
   private final ImmutableList<TypeVariableName> mTypeVariables;
   private final ImmutableList<StateParamModel> mStateValues;
   private final ImmutableList<CachedValueParamModel> mCachedValues;
   private final ImmutableList<InterStageInputParamModel> mInterStageInputs;
+  private final ImmutableList<PrepareInterStageInputParamModel> mPrepareInterStageInputs;
   private final ImmutableList<TreePropModel> mTreeProps;
   private final ImmutableList<EventDeclarationModel> mEventDeclarations;
   private final ImmutableList<BuilderMethodModel> mImplicitBuilderMethods;
@@ -75,14 +75,13 @@ public final class SpecModelImpl implements SpecModel {
   private final String mClassJavadoc;
   private final ImmutableList<PropJavadocModel> mPropJavadocs;
   private final boolean mIsPublic;
-  private final boolean mHasInjectedDependencies;
-  @Nullable private final DependencyInjectionHelper mDependencyInjectionHelper;
   private final Object mRepresentedObject;
 
   private SpecModelImpl(
       String qualifiedSpecClassName,
       String componentClassName,
       ClassName componentClass,
+      ClassName contextClassName,
       ImmutableList<SpecMethodModel<DelegateMethod, Void>> delegateMethods,
       ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> eventMethods,
       ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> triggerMethods,
@@ -91,7 +90,6 @@ public final class SpecModelImpl implements SpecModel {
       ImmutableList<SpecMethodModel<UpdateStateMethod, Void>> updateStateMethods,
       ImmutableList<SpecMethodModel<UpdateStateMethod, Void>> updateStateWithTransitionMethods,
       ImmutableList<PropModel> props,
-      ImmutableList<InjectPropModel> injectProps,
       ImmutableList<String> cachedPropNames,
       ImmutableList<TypeVariableName> typeVariables,
       ImmutableList<PropDefaultModel> propDefaults,
@@ -104,12 +102,12 @@ public final class SpecModelImpl implements SpecModel {
       String classJavadoc,
       ImmutableList<PropJavadocModel> propJavadocs,
       boolean isPublic,
-      @Nullable DependencyInjectionHelper dependencyInjectionHelper,
       SpecElementType specElementType,
       Object representedObject) {
     mSpecName = getSpecName(qualifiedSpecClassName);
     mSpecTypeName = ClassName.bestGuess(qualifiedSpecClassName);
     mComponentClass = componentClass;
+    mContextClassName = contextClassName;
     mComponentName = getComponentName(componentClassName, qualifiedSpecClassName);
     mComponentTypeName = getComponentTypeName(componentClassName, qualifiedSpecClassName);
     mDelegateMethods = delegateMethods;
@@ -119,8 +117,8 @@ public final class SpecModelImpl implements SpecModel {
     mWorkingRangeMethods = workingRangeMethods;
     mUpdateStateMethods = updateStateMethods;
     mUpdateStateWithTransitionMethods = updateStateWithTransitionMethods;
-    mRawProps =
-        getRawProps(
+    ImmutableList<PropModel> rawPropsWithoutDiffProps =
+        getRawPropsWithoutDiffProps(
             delegateMethods,
             eventMethods,
             triggerMethods,
@@ -128,19 +126,12 @@ public final class SpecModelImpl implements SpecModel {
             workingRangeMethods,
             updateStateMethods,
             bindDynamicValueMethods);
-    mProps = props.isEmpty() ? getProps(mRawProps, cachedPropNames, delegateMethods) : props;
-    mRawInjectProps =
-        getRawInjectProps(
-            delegateMethods,
-            eventMethods,
-            triggerMethods,
-            workingRangeRegisterMethod,
-            workingRangeMethods,
-            updateStateMethods);
-    mInjectProps =
-        injectProps.isEmpty()
-            ? getInjectProps(mRawInjectProps, cachedPropNames, mRawProps.size())
-            : injectProps;
+
+    mRawProps = getRawProps(rawPropsWithoutDiffProps, delegateMethods);
+    mProps =
+        props.isEmpty()
+            ? getProps(rawPropsWithoutDiffProps, cachedPropNames, delegateMethods)
+            : props;
     mPropDefaults = propDefaults;
     mTypeVariables = typeVariables;
     mStateValues =
@@ -167,6 +158,14 @@ public final class SpecModelImpl implements SpecModel {
             workingRangeRegisterMethod,
             workingRangeMethods,
             updateStateMethods);
+    mPrepareInterStageInputs =
+        getLayoutInterStageInputs(
+            delegateMethods,
+            eventMethods,
+            triggerMethods,
+            workingRangeRegisterMethod,
+            workingRangeMethods,
+            updateStateMethods);
     mTreeProps =
         getTreeProps(
             delegateMethods,
@@ -185,8 +184,6 @@ public final class SpecModelImpl implements SpecModel {
     mClassJavadoc = classJavadoc;
     mPropJavadocs = propJavadocs;
     mIsPublic = isPublic;
-    mHasInjectedDependencies = dependencyInjectionHelper != null;
-    mDependencyInjectionHelper = dependencyInjectionHelper;
     mSpecElementType = specElementType;
     mRepresentedObject = representedObject;
   }
@@ -263,17 +260,6 @@ public final class SpecModelImpl implements SpecModel {
     return mProps;
   }
 
-  /** @return the list of injected props without name cache adjustments. */
-  @Override
-  public ImmutableList<InjectPropModel> getRawInjectProps() {
-    return mRawInjectProps;
-  }
-
-  @Override
-  public ImmutableList<InjectPropModel> getInjectProps() {
-    return mInjectProps;
-  }
-
   @Override
   public ImmutableList<PropDefaultModel> getPropDefaults() {
     return mPropDefaults;
@@ -297,6 +283,11 @@ public final class SpecModelImpl implements SpecModel {
   @Override
   public ImmutableList<InterStageInputParamModel> getInterStageInputs() {
     return mInterStageInputs;
+  }
+
+  @Override
+  public ImmutableList<PrepareInterStageInputParamModel> getPrepareInterStageInputs() {
+    return mPrepareInterStageInputs;
   }
 
   @Override
@@ -346,7 +337,7 @@ public final class SpecModelImpl implements SpecModel {
 
   @Override
   public ClassName getContextClass() {
-    throw new RuntimeException("Don't delegate to this method!");
+    return mContextClassName;
   }
 
   @Override
@@ -380,11 +371,6 @@ public final class SpecModelImpl implements SpecModel {
   }
 
   @Override
-  public boolean hasInjectedDependencies() {
-    return mHasInjectedDependencies;
-  }
-
-  @Override
   public boolean shouldCheckIdInIsEquivalentToMethod() {
     throw new RuntimeException("Don't delegate to this method!");
   }
@@ -399,10 +385,14 @@ public final class SpecModelImpl implements SpecModel {
     throw new RuntimeException("Don't delegate to this method!");
   }
 
-  @Nullable
   @Override
-  public DependencyInjectionHelper getDependencyInjectionHelper() {
-    return mDependencyInjectionHelper;
+  public boolean shouldGenerateTransferState() {
+    throw new RuntimeException("Don't delegate to this method!");
+  }
+
+  @Override
+  public boolean isStateful() {
+    return true;
   }
 
   @Override
@@ -496,17 +486,27 @@ public final class SpecModelImpl implements SpecModel {
     return name != null ? prop.withName(name) : prop;
   }
 
-  private static InjectPropModel updateInjectPropWithCachedName(
-      InjectPropModel prop, @Nullable List<String> cachedPropNames, int index) {
-    final String name =
-        cachedPropNames != null && index < cachedPropNames.size()
-            ? cachedPropNames.get(index)
-            : null;
-    return name != null ? prop.withName(name) : prop;
-  }
-
   /** Extract props without taking deduplication and name caching into account. */
   private static ImmutableList<PropModel> getRawProps(
+      ImmutableList<PropModel> rawPropsWithoutDiffProps,
+      ImmutableList<SpecMethodModel<DelegateMethod, Void>> delegateMethods) {
+    final List<PropModel> props = new ArrayList<>();
+
+    props.addAll(rawPropsWithoutDiffProps);
+
+    for (SpecMethodModel<DelegateMethod, Void> delegateMethod : delegateMethods) {
+      for (MethodParamModel param : delegateMethod.methodParams) {
+        if (param instanceof DiffPropModel) {
+          props.add(((DiffPropModel) param).getUnderlyingPropModel());
+        }
+      }
+    }
+
+    return ImmutableList.copyOf(props);
+  }
+
+  /** Extract PropModel props without taking deduplication and name caching into account. */
+  private static ImmutableList<PropModel> getRawPropsWithoutDiffProps(
       ImmutableList<SpecMethodModel<DelegateMethod, Void>> delegateMethods,
       ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> eventMethods,
       ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> triggerMethods,
@@ -573,14 +573,6 @@ public final class SpecModelImpl implements SpecModel {
       }
     }
 
-    for (SpecMethodModel<DelegateMethod, Void> delegateMethod : delegateMethods) {
-      for (MethodParamModel param : delegateMethod.methodParams) {
-        if (param instanceof DiffPropModel) {
-          props.add(((DiffPropModel) param).getUnderlyingPropModel());
-        }
-      }
-    }
-
     for (SpecMethodModel<BindDynamicValueMethod, Void> bindDynamicValueMethod :
         bindDynamicValueMethods) {
       for (MethodParamModel param : bindDynamicValueMethod.methodParams) {
@@ -589,28 +581,25 @@ public final class SpecModelImpl implements SpecModel {
         }
       }
     }
-
     return ImmutableList.copyOf(props);
   }
 
   private static ImmutableList<PropModel> getProps(
-      ImmutableList<PropModel> rawProps,
+      ImmutableList<PropModel> baseProps,
       ImmutableList<String> cachedPropNames,
       ImmutableList<SpecMethodModel<DelegateMethod, Void>> delegateMethods) {
 
     // Extract diff models first as they need special handling and need to be removed
     // from our raw props.
     final List<DiffPropModel> diffPropModels =
-        delegateMethods
-            .stream()
+        delegateMethods.stream()
             .flatMap(f -> f.methodParams.stream())
             .filter(f -> f instanceof DiffPropModel)
             .map(f -> (DiffPropModel) f)
             .collect(Collectors.toList());
 
-    // Get list of props without potential diffProps.
-    final int basePropsSize = rawProps.size() - diffPropModels.size();
-    final List<PropModel> baseProps = rawProps.subList(0, basePropsSize);
+    // Get list of props size without potential diffProps.
+    final int basePropsSize = baseProps.size();
 
     // Update names from cache.
     final List<PropModel> renamedBaseProps =
@@ -632,8 +621,7 @@ public final class SpecModelImpl implements SpecModel {
                   final String cachedDiffPropName =
                       i < cachedPropNames.size() ? cachedPropNames.get(i) : null;
 
-                  if (props
-                      .stream()
+                  if (props.stream()
                       .noneMatch(
                           prop ->
                               diffPropModels
@@ -654,97 +642,6 @@ public final class SpecModelImpl implements SpecModel {
     props.addAll(additionalProps);
 
     return ImmutableList.copyOf(new ArrayList<>(props));
-  }
-
-  private static ImmutableList<InjectPropModel> getRawInjectProps(
-      ImmutableList<SpecMethodModel<DelegateMethod, Void>> delegateMethods,
-      ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> eventMethods,
-      ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> triggerMethods,
-      @Nullable SpecMethodModel<EventMethod, Void> workingRangeRegisterMethod,
-      ImmutableList<WorkingRangeMethodModel> workingRangeMethods,
-      ImmutableList<SpecMethodModel<UpdateStateMethod, Void>> updateStateMethods) {
-
-    final List<InjectPropModel> props = new ArrayList<>();
-
-    for (SpecMethodModel<DelegateMethod, Void> delegateMethod : delegateMethods) {
-      for (MethodParamModel param : delegateMethod.methodParams) {
-        if (param instanceof InjectPropModel) {
-          props.add((InjectPropModel) param);
-        }
-      }
-    }
-
-    for (SpecMethodModel<EventMethod, EventDeclarationModel> eventMethod : eventMethods) {
-      for (MethodParamModel param : eventMethod.methodParams) {
-        if (param instanceof InjectPropModel) {
-          props.add((InjectPropModel) param);
-        }
-      }
-    }
-
-    for (SpecMethodModel<EventMethod, EventDeclarationModel> triggerMethod : triggerMethods) {
-      for (MethodParamModel param : triggerMethod.methodParams) {
-        if (param instanceof InjectPropModel) {
-          props.add((InjectPropModel) param);
-        }
-      }
-    }
-
-    if (workingRangeRegisterMethod != null) {
-      for (MethodParamModel param : workingRangeRegisterMethod.methodParams) {
-        if (param instanceof InjectPropModel) {
-          props.add((InjectPropModel) param);
-        }
-      }
-    }
-
-    for (WorkingRangeMethodModel workingRangeMethod : workingRangeMethods) {
-      if (workingRangeMethod.enteredRangeModel != null) {
-        for (MethodParamModel param : workingRangeMethod.enteredRangeModel.methodParams) {
-          if (param instanceof InjectPropModel) {
-            props.add((InjectPropModel) param);
-          }
-        }
-      }
-      if (workingRangeMethod.exitedRangeModel != null) {
-        for (MethodParamModel param : workingRangeMethod.exitedRangeModel.methodParams) {
-          if (param instanceof InjectPropModel) {
-            props.add((InjectPropModel) param);
-          }
-        }
-      }
-    }
-
-    for (SpecMethodModel<UpdateStateMethod, Void> updateStateMethod : updateStateMethods) {
-      for (MethodParamModel param : updateStateMethod.methodParams) {
-        if (param instanceof InjectPropModel) {
-          props.add((InjectPropModel) param);
-        }
-      }
-    }
-
-    return ImmutableList.copyOf(props);
-  }
-
-  private static ImmutableList<InjectPropModel> getInjectProps(
-      ImmutableList<InjectPropModel> rawInjectProps,
-      ImmutableList<String> cachedPropNames,
-      int propOffset) {
-
-    // Update names from cache.
-    final List<InjectPropModel> renamedProps =
-        IntStream.range(0, rawInjectProps.size())
-            .mapToObj(
-                i ->
-                    updateInjectPropWithCachedName(
-                        rawInjectProps.get(i), cachedPropNames, i + propOffset))
-            .collect(Collectors.toList());
-
-    final Set<InjectPropModel> dedupedRenamedProps =
-        new TreeSet<>(MethodParamModelUtils.shallowParamComparator());
-    dedupedRenamedProps.addAll(renamedProps);
-
-    return ImmutableList.copyOf(new ArrayList<>(dedupedRenamedProps));
   }
 
   private static ImmutableList<StateParamModel> getStateValues(
@@ -997,6 +894,83 @@ public final class SpecModelImpl implements SpecModel {
     return ImmutableList.copyOf(new ArrayList<>(interStageInputs));
   }
 
+  private static ImmutableList<PrepareInterStageInputParamModel> getLayoutInterStageInputs(
+      ImmutableList<SpecMethodModel<DelegateMethod, Void>> delegateMethods,
+      ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> eventMethods,
+      ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> triggerMethods,
+      @Nullable SpecMethodModel<EventMethod, Void> workingRangeRegisterMethod,
+      ImmutableList<WorkingRangeMethodModel> workingRangeMethods,
+      ImmutableList<SpecMethodModel<UpdateStateMethod, Void>> updateStateMethods) {
+    final Set<PrepareInterStageInputParamModel> interStageInputs =
+        new TreeSet<>(MethodParamModelUtils.shallowParamComparator());
+    for (SpecMethodModel<DelegateMethod, Void> delegateMethod : delegateMethods) {
+      for (MethodParamModel param : delegateMethod.methodParams) {
+        if (param instanceof PrepareInterStageInputParamModel) {
+          interStageInputs.add((PrepareInterStageInputParamModel) param);
+        }
+      }
+    }
+
+    for (SpecMethodModel<EventMethod, EventDeclarationModel> eventMethod : eventMethods) {
+      for (MethodParamModel param : eventMethod.methodParams) {
+        if (param instanceof PrepareInterStageInputParamModel) {
+          interStageInputs.add((PrepareInterStageInputParamModel) param);
+        }
+      }
+    }
+
+    for (SpecMethodModel<EventMethod, EventDeclarationModel> eventMethod : eventMethods) {
+      for (MethodParamModel param : eventMethod.methodParams) {
+        if (param instanceof PrepareInterStageInputParamModel) {
+          interStageInputs.add((PrepareInterStageInputParamModel) param);
+        }
+      }
+    }
+
+    for (SpecMethodModel<EventMethod, EventDeclarationModel> triggerMethod : triggerMethods) {
+      for (MethodParamModel param : triggerMethod.methodParams) {
+        if (param instanceof PrepareInterStageInputParamModel) {
+          interStageInputs.add((PrepareInterStageInputParamModel) param);
+        }
+      }
+    }
+
+    if (workingRangeRegisterMethod != null) {
+      for (MethodParamModel param : workingRangeRegisterMethod.methodParams) {
+        if (param instanceof PrepareInterStageInputParamModel) {
+          interStageInputs.add((PrepareInterStageInputParamModel) param);
+        }
+      }
+    }
+
+    for (WorkingRangeMethodModel workingRangeMethod : workingRangeMethods) {
+      if (workingRangeMethod.enteredRangeModel != null) {
+        for (MethodParamModel param : workingRangeMethod.enteredRangeModel.methodParams) {
+          if (param instanceof PrepareInterStageInputParamModel) {
+            interStageInputs.add((PrepareInterStageInputParamModel) param);
+          }
+        }
+      }
+      if (workingRangeMethod.exitedRangeModel != null) {
+        for (MethodParamModel param : workingRangeMethod.exitedRangeModel.methodParams) {
+          if (param instanceof PrepareInterStageInputParamModel) {
+            interStageInputs.add((PrepareInterStageInputParamModel) param);
+          }
+        }
+      }
+    }
+
+    for (SpecMethodModel<UpdateStateMethod, Void> updateStateMethod : updateStateMethods) {
+      for (MethodParamModel param : updateStateMethod.methodParams) {
+        if (param instanceof PrepareInterStageInputParamModel) {
+          interStageInputs.add((PrepareInterStageInputParamModel) param);
+        }
+      }
+    }
+
+    return ImmutableList.copyOf(new ArrayList<>(interStageInputs));
+  }
+
   private static ImmutableList<TreePropModel> getTreeProps(
       ImmutableList<SpecMethodModel<DelegateMethod, Void>> delegateMethods,
       ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> eventMethods,
@@ -1070,10 +1044,11 @@ public final class SpecModelImpl implements SpecModel {
     return new Builder();
   }
 
-  public static class Builder {
+  public static final class Builder {
     private String mQualifiedSpecClassName;
     private String mComponentClassName;
     private ClassName mComponentClass;
+    private ClassName mContextClassName;
     private ImmutableList<SpecMethodModel<DelegateMethod, Void>> mDelegateMethodModels;
     private ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> mEventMethodModels;
     private ImmutableList<SpecMethodModel<EventMethod, EventDeclarationModel>> mTriggerMethodModels;
@@ -1094,11 +1069,9 @@ public final class SpecModelImpl implements SpecModel {
     private String mClassJavadoc;
     private ImmutableList<PropJavadocModel> mPropJavadocs;
     private boolean mIsPublic;
-    @Nullable private DependencyInjectionHelper mDependencyInjectionHelper;
     private Object mRepresentedObject;
     private SpecElementType mSpecElementType;
     private ImmutableList<PropModel> mProps;
-    private ImmutableList<InjectPropModel> mInjectProps;
 
     private Builder() {}
 
@@ -1121,6 +1094,11 @@ public final class SpecModelImpl implements SpecModel {
       return this;
     }
 
+    public Builder contextClassName(ClassName contextClassName) {
+      mContextClassName = contextClassName;
+      return this;
+    }
+
     public Builder delegateMethods(
         ImmutableList<SpecMethodModel<DelegateMethod, Void>> delegateMethodModels) {
       mDelegateMethodModels = delegateMethodModels;
@@ -1140,7 +1118,7 @@ public final class SpecModelImpl implements SpecModel {
     }
 
     public Builder workingRangeRegisterMethod(
-        SpecMethodModel<EventMethod, Void> workingRangeRegisterModel) {
+        @Nullable SpecMethodModel<EventMethod, Void> workingRangeRegisterModel) {
       mWorkingRangeRegisterModel = workingRangeRegisterModel;
       return this;
     }
@@ -1230,17 +1208,6 @@ public final class SpecModelImpl implements SpecModel {
       return this;
     }
 
-    public Builder injectProps(ImmutableList<InjectPropModel> injectPropModels) {
-      mInjectProps = injectPropModels;
-      return this;
-    }
-
-    public Builder dependencyInjectionHelper(
-        @Nullable DependencyInjectionHelper dependencyInjectionHelper) {
-      mDependencyInjectionHelper = dependencyInjectionHelper;
-      return this;
-    }
-
     public Builder representedObject(Object representedObject) {
       mRepresentedObject = representedObject;
       return this;
@@ -1259,6 +1226,7 @@ public final class SpecModelImpl implements SpecModel {
           mQualifiedSpecClassName,
           mComponentClassName,
           mComponentClass,
+          mContextClassName,
           mDelegateMethodModels,
           mEventMethodModels,
           mTriggerMethodModels,
@@ -1267,7 +1235,6 @@ public final class SpecModelImpl implements SpecModel {
           mUpdateStateMethodModels,
           mUpdateStateWithTransitionMethodModels,
           mProps,
-          mInjectProps,
           mCachedPropNames,
           mTypeVariableNames,
           mPropDefaultModels,
@@ -1280,7 +1247,6 @@ public final class SpecModelImpl implements SpecModel {
           mClassJavadoc,
           mPropJavadocs,
           mIsPublic,
-          mDependencyInjectionHelper,
           mSpecElementType,
           mRepresentedObject);
     }
@@ -1310,10 +1276,6 @@ public final class SpecModelImpl implements SpecModel {
 
       if (mProps == null) {
         mProps = ImmutableList.of();
-      }
-
-      if (mInjectProps == null) {
-        mInjectProps = ImmutableList.of();
       }
 
       if (mDelegateMethodModels == null) {

@@ -1,11 +1,11 @@
 /*
- * Copyright 2014-present Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,12 +16,15 @@
 
 package com.facebook.litho.specmodels.generator.testing;
 
+import static com.facebook.litho.specmodels.generator.GeneratorUtils.annotation;
+import static com.facebook.litho.specmodels.generator.GeneratorUtils.parameter;
+
+import com.facebook.infer.annotation.Nullsafe;
+import com.facebook.litho.annotations.Generated;
 import com.facebook.litho.specmodels.generator.TypeSpecDataHolder;
 import com.facebook.litho.specmodels.internal.ImmutableList;
 import com.facebook.litho.specmodels.model.ClassNames;
-import com.facebook.litho.specmodels.model.DependencyInjectionHelper;
 import com.facebook.litho.specmodels.model.HasEnclosedSpecModel;
-import com.facebook.litho.specmodels.model.InjectPropModel;
 import com.facebook.litho.specmodels.model.MethodParamModel;
 import com.facebook.litho.specmodels.model.PropModel;
 import com.facebook.litho.specmodels.model.SpecModel;
@@ -46,6 +49,7 @@ import javax.annotation.Nullable;
 import javax.lang.model.element.Modifier;
 
 /** Class that generates the matcher builder for a test Component. */
+@Nullsafe(Nullsafe.Mode.LOCAL)
 public final class MatcherGenerator {
 
   private static final String BUILDER = "Matcher";
@@ -95,6 +99,7 @@ public final class MatcherGenerator {
             .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
             .superclass(
                 ParameterizedTypeName.get(ClassNames.BASE_MATCHER, getMatcherType(specModel)))
+            .addAnnotation(Generated.class)
             .addField(
                 FieldSpec.builder(
                         ClassNames.RESOURCE_RESOLVER, RESOURCE_RESOLVER, Modifier.PROTECTED)
@@ -107,18 +112,13 @@ public final class MatcherGenerator {
     final MethodSpec constructor =
         MethodSpec.constructorBuilder()
             .addParameter(specModel.getContextClass(), "c")
-            .addStatement("$L = new $T(c)", RESOURCE_RESOLVER, ClassNames.RESOURCE_RESOLVER)
+            .addStatement("$L = c.getResourceResolver()", RESOURCE_RESOLVER)
             .build();
 
     propsBuilderClassBuilder.addMethod(constructor);
 
     for (final PropModel prop : specModel.getProps()) {
       generatePropsBuilderMethods(specModel, prop).addToTypeSpec(propsBuilderClassBuilder);
-    }
-
-    for (final InjectPropModel prop : specModel.getInjectProps()) {
-      generatePropsBuilderMethods(specModel, prop.toPropModel())
-          .addToTypeSpec(propsBuilderClassBuilder);
     }
 
     propsBuilderClassBuilder
@@ -142,7 +142,6 @@ public final class MatcherGenerator {
 
     if (prop.hasVarArgs()) {
       dataHolder.addMethod(varArgBuilder(specModel, prop));
-      final ParameterizedTypeName type = (ParameterizedTypeName) prop.getTypeName();
       if (isComponentType(prop)) {
         dataHolder.addMethod(varArgBuilderBuilder(specModel, prop));
       }
@@ -282,12 +281,21 @@ public final class MatcherGenerator {
 
   private static MethodSpec regularBuilder(
       SpecModel specModel, final PropModel prop, final AnnotationSpec... extraAnnotations) {
+
+    final TypeName param;
+    if (prop.isDynamic()) {
+      final TypeName type = getRawType(prop.getTypeName());
+      param = ParameterizedTypeName.get(ClassNames.DYNAMIC_VALUE, type);
+    } else {
+      param = getRawType(prop.getTypeName());
+    }
+
     return builder(
         specModel,
         prop,
         prop.getName(),
         Collections.singletonList(
-            parameter(prop, prop.getTypeName(), prop.getName(), extraAnnotations)),
+            parameter(param, prop.getName(), prop.getExternalAnnotations(), extraAnnotations)),
         prop.getName());
   }
 
@@ -309,10 +317,16 @@ public final class MatcherGenerator {
   }
 
   private static ParameterizedTypeName getPropMatcherType(PropModel prop) {
-    final TypeName rawType = getRawType(prop.getTypeName());
+    final TypeName propType;
+    if (prop.isDynamic()) {
+      final TypeName type = getRawType(prop.getTypeName()).box();
+      propType = ParameterizedTypeName.get(ClassNames.DYNAMIC_VALUE, type);
+    } else {
+      propType = getRawType(prop.getTypeName()).box();
+    }
 
     // We can only match against unparameterized (i.e. raw) types. Thanks, Java.
-    return ParameterizedTypeName.get(ClassNames.HAMCREST_MATCHER, rawType.box());
+    return ParameterizedTypeName.get(ClassNames.HAMCREST_MATCHER, propType);
   }
 
   static String getPropComponentMatcherName(final MethodParamModel prop) {
@@ -462,8 +476,7 @@ public final class MatcherGenerator {
         specModel,
         prop,
         prop.getName() + "Px",
-        Collections.singletonList(
-            parameter(prop, prop.getTypeName(), prop.getName(), annotation(ClassNames.PX))),
+        Collections.singletonList(parameter(prop, annotation(ClassNames.PX))),
         prop.getName());
   }
 
@@ -523,32 +536,13 @@ public final class MatcherGenerator {
         type instanceof ParameterizedTypeName
                 && !((ParameterizedTypeName) type).typeArguments.isEmpty()
             ? ((ParameterizedTypeName) type).typeArguments.get(0)
-            : WildcardTypeName.subtypeOf(ClassNames.COMPONENT_LIFECYCLE);
+            : WildcardTypeName.subtypeOf(ClassNames.SPEC_GENERATED_COMPONENT);
 
     if (builderClass.equals(ClassNames.COMPONENT_BUILDER)) {
       return new TypeName[] {WildcardTypeName.subtypeOf(TypeName.OBJECT)};
     } else {
       return new TypeName[] {typeParameter};
     }
-  }
-
-  private static ParameterSpec parameter(
-      final PropModel prop,
-      final TypeName type,
-      final String name,
-      final AnnotationSpec... extraAnnotations) {
-    final ParameterSpec.Builder builder =
-        ParameterSpec.builder(type, name).addAnnotations(prop.getExternalAnnotations());
-
-    for (final AnnotationSpec annotation : extraAnnotations) {
-      builder.addAnnotation(annotation);
-    }
-
-    return builder.build();
-  }
-
-  private static AnnotationSpec annotation(final ClassName className) {
-    return AnnotationSpec.builder(className).build();
   }
 
   private static MethodSpec builder(
@@ -584,13 +578,21 @@ public final class MatcherGenerator {
 
     final String propMatcherName = getPropMatcherName(prop);
     final CodeBlock formattedStatement = CodeBlock.of(statement, formatObjects);
+
+    final TypeName propType;
+    if (prop.isDynamic()) {
+      final TypeName type = getRawType(prop.getTypeName());
+      propType = ParameterizedTypeName.get(ClassNames.DYNAMIC_VALUE, type);
+    } else {
+      propType = getRawType(prop.getTypeName());
+    }
     final CodeBlock codeBlock =
         CodeBlock.builder()
             .addStatement(
                 "this.$N = $L.is(($T) $L)",
                 propMatcherName,
                 ClassNames.HAMCREST_CORE_IS,
-                getRawType(prop.getTypeName()),
+                propType,
                 formattedStatement)
             .build();
 
@@ -653,21 +655,6 @@ public final class MatcherGenerator {
               MatcherGenerator::generateFieldExtractorBlock));
     }
 
-    for (InjectPropModel prop : specModel.getInjectProps()) {
-      if (getRawType(prop.getTypeName()).equals(ClassNames.COMPONENT)) {
-        builder.add(
-            generateComponentMatchBlock(
-                new FieldExtractorSpec(
-                    enclosedSpecModel, prop, getPropValueName(prop) + "Component"),
-                MatcherGenerator::generateInjectedFieldExtractorBlock));
-      }
-
-      builder.add(
-          generateValuePropMatchBlock(
-              new FieldExtractorSpec(enclosedSpecModel, prop, getPropValueName(prop)),
-              MatcherGenerator::generateInjectedFieldExtractorBlock));
-    }
-
     builder.addStatement("return true");
 
     return builder.build();
@@ -679,34 +666,20 @@ public final class MatcherGenerator {
   }
 
   private static CodeBlock generateFieldExtractorBlock(FieldExtractorSpec fieldExtractorSpec) {
+    final TypeName propType;
+    if (fieldExtractorSpec.propModel instanceof PropModel
+        && ((PropModel) fieldExtractorSpec.propModel).isDynamic()) {
+      final TypeName type = getRawType(fieldExtractorSpec.propModel.getTypeName());
+      propType = ParameterizedTypeName.get(ClassNames.DYNAMIC_VALUE, type);
+    } else {
+      propType = fieldExtractorSpec.propModel.getTypeName();
+    }
     return CodeBlock.builder()
         .addStatement(
             "final $T $L = impl.$L",
-            fieldExtractorSpec.propModel.getTypeName(),
+            propType,
             fieldExtractorSpec.varName,
             fieldExtractorSpec.propModel.getName())
-        .build();
-  }
-
-  private static CodeBlock generateInjectedFieldExtractorBlock(
-      FieldExtractorSpec fieldExtractorSpec) {
-    final DependencyInjectionHelper diHelper =
-        fieldExtractorSpec.specModel.getDependencyInjectionHelper();
-
-    if (diHelper == null) {
-      return CodeBlock.builder().build();
-    }
-
-    final String getterName =
-        diHelper.generateTestingFieldAccessor(
-                new InjectPropModel(fieldExtractorSpec.propModel, fieldExtractorSpec.isLazy))
-            .name;
-    return CodeBlock.builder()
-        .addStatement(
-            "final $T $L = impl.$L()",
-            fieldExtractorSpec.propModel.getTypeName(),
-            fieldExtractorSpec.varName,
-            getterName)
         .build();
   }
 
@@ -714,7 +687,6 @@ public final class MatcherGenerator {
       FieldExtractorSpec fieldExtractorSpec,
       Function<FieldExtractorSpec, CodeBlock> fieldExtractorBlockFn) {
     final String matcherName = getPropComponentMatcherName(fieldExtractorSpec.propModel);
-    final String propValueName = getPropValueName(fieldExtractorSpec.propModel) + "Component";
     return CodeBlock.builder()
         .add(fieldExtractorBlockFn.apply(fieldExtractorSpec))
         .beginControlFlow(
@@ -769,9 +741,7 @@ public final class MatcherGenerator {
     }
 
     final TypeName[] typeNames =
-        enclosedSpecModel
-            .getTypeVariables()
-            .stream()
+        enclosedSpecModel.getTypeVariables().stream()
             .map(TypeVariableName::withoutAnnotations)
             .collect(Collectors.toList())
             .toArray(new TypeName[] {});
@@ -804,7 +774,7 @@ public final class MatcherGenerator {
         .addStatement("final $T mainBuilder = $L", getMatcherConditionTypeName(), matcherInnerClass)
         .addStatement(
             "return $T.allOf(mainBuilder, $T.buildCommonMatcher(this))",
-            ClassNames.ASSERTJ_JAVA6ASSERTIONS,
+            ClassNames.ASSERTJ_ASSERTIONS,
             ClassNames.BASE_MATCHER_BUILDER)
         .build();
   }
@@ -813,20 +783,11 @@ public final class MatcherGenerator {
     public final SpecModel specModel;
     public final String varName;
     public final MethodParamModel propModel;
-    public final boolean isLazy;
 
     private FieldExtractorSpec(SpecModel specModel, MethodParamModel propModel, String varName) {
       this.specModel = specModel;
       this.propModel = propModel;
       this.varName = varName;
-      this.isLazy = false;
-    }
-
-    private FieldExtractorSpec(SpecModel specModel, InjectPropModel propModel, String varName) {
-      this.specModel = specModel;
-      this.propModel = propModel;
-      this.varName = varName;
-      this.isLazy = propModel.isLazy();
     }
   }
 }
